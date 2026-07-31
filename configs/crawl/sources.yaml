@@ -168,15 +168,31 @@ sources:
     allowed_paths: ["/qq/"]
     denied_paths: ["/ru/", "/uz/", "/en/", "/search", "/tag/", "/wp-admin/"]
     delay_seconds: 2.0
+    use_sitemap: false
     priority: 1
     verified_on: 2026-07-31
     notes: >-
-      VERIFIED kaa=1.00, latin_2016. State news agency of Karakalpakstan and
-      the best live Karakalpak news feed. WordPress: sitemap index at
-      /sitemap.xml with 12 children; wp-sitemap-posts-post-3.xml alone lists
-      1,785 URLs, while children 1 and 2 currently return HTTP 500 - the
-      crawler must tolerate broken sitemap children and fall back to link
-      discovery. robots.txt allows us.
+      VERIFIED by a real crawl: 30 pages fetched, 0 failures, 100% Karakalpak,
+      262 further URLs discovered. State news agency of Karakalpakstan and the
+      best live Karakalpak news feed.
+
+      SITEMAP DISABLED, and the reason matters. The WordPress sitemap indexes
+      only the RUSSIAN edition: its 1,785 entries are bare-ID permalinks such
+      as /225694.html which serve Russian, and /ru/225694.html redirects to
+      them. Karakalpak lives under /qq/ and is absent from the sitemap
+      entirely. `allowed_paths: ["/qq/"]` correctly rejected all 1,785 of them;
+      without it this source would have poured a Russian corpus into a
+      Karakalpak dataset. Seeding is therefore link-crawl from /qq/.
+      Two sitemap children also return HTTP 500 intermittently.
+
+      ROBOTS/AI POLICY - READ BEFORE SCALING UP. robots.txt sets
+      `User-agent: *` to `Allow: /`, so our crawler is permitted. But it also
+      names and blocks AI crawlers specifically: ClaudeBot, GPTBot,
+      OAI-SearchBot, plus SemrushBot, AhrefsBot, MJ12bot and DotBot. The
+      operators have evidently thought about AI training crawlers and opted
+      out of the ones they know by name. We are inside the letter of the rules
+      and arguably outside their spirit. Seek written permission before any
+      full-site crawl, and never rename the User-Agent to evade a rule.
 
   - id: gov_jokargikenes
     name: Joqarǵı Keńes (Karakalpakstan parliament)

@@ -85,6 +85,13 @@ class SourceSpec(StrictModel):
     delay_seconds: float = Field(default=2.0, ge=0.0, le=60.0)
     max_pages: int | None = Field(default=None, ge=1)
     respect_robots: bool = True
+    use_sitemap: bool = Field(
+        default=True,
+        description=(
+            "Seed from robots.txt sitemaps. Set false where the sitemap indexes a "
+            "different language than the one we want, or is reliably broken."
+        ),
+    )
 
     enabled: bool = True
     priority: int = Field(default=3, ge=1, le=5, description="1 = crawl first.")

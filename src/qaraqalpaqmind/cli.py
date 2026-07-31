@@ -70,10 +70,26 @@ def doctor() -> None:
             typer.secho(f"[missing] extra '{label}'  ->  pip install -e '.[{label}]'", fg=typer.colors.YELLOW)
 
 
-# --- Phase groups are registered here as each phase lands ------------------
-# from .crawlers.cli import app as crawl_app;   app.add_typer(crawl_app, name="crawl")
-# from .cleaning.cli import app as clean_app;   app.add_typer(clean_app, name="clean")
-# from .training.cli import app as train_app;   app.add_typer(train_app, name="train")
+def _register_groups() -> None:
+    """Attach phase sub-commands, skipping any whose extras are not installed.
+
+    Import errors are swallowed on purpose: a machine with only `.[crawl]`
+    should still get a working `qm crawl`, and a helpful message rather than a
+    traceback for the groups it cannot load.
+    """
+    try:
+        from .crawlers.cli import app as crawl_app
+
+        app.add_typer(crawl_app, name="crawl")
+    except ImportError as exc:
+        logger.debug("crawl group unavailable", extra={"error": str(exc)})
+
+    # Registered as each phase lands:
+    # from .cleaning.cli import app as clean_app;  app.add_typer(clean_app, name="clean")
+    # from .training.cli import app as train_app;  app.add_typer(train_app, name="train")
+
+
+_register_groups()
 
 
 if __name__ == "__main__":

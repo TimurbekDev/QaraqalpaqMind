@@ -76,11 +76,26 @@ Not guesses — these come from parsing each site's `wp-sitemap.xml`:
 
 | Site | URLs found |
 |---|---|
-| kknews.uz | 1,785 posts in one sitemap child alone (children 1–2 return HTTP 500) |
 | qaraqalpaqstan.sud.uz | 496 Cyrillic + 348 Latin posts |
 | qrdsm.uz | 352 posts |
 | ndpi.uz | 300 posts + 169 pages |
 | kkmi.uz | 87 posts + 103 pages under `/qq/` |
+| kknews.uz | **sitemap is Russian-only — see below** |
+
+> **Correction (2026-07-31, after the first real crawl).** An earlier draft of
+> this audit credited kknews.uz with "1,785 posts" from its sitemap. Those 1,785
+> URLs are the **Russian** edition: they are bare-ID permalinks like
+> `/225694.html`, and `/ru/225694.html` redirects to them. The Karakalpak
+> edition lives under `/qq/` and appears in no sitemap at all. The Karakalpak
+> article count is therefore still unmeasured; a 30-page link crawl from `/qq/`
+> returned 100% Karakalpak and discovered 262 further in-scope URLs, so the
+> section is clearly substantial, but the ~30 MB estimate is an extrapolation,
+> not a count.
+>
+> This is the single most valuable thing the crawler caught: `allowed_paths:
+> ["/qq/"]` rejected all 1,785 Russian URLs. Without that one line, the flagship
+> Karakalpak source would have poured a Russian corpus into a Karakalpak dataset,
+> and it would have looked like a success.
 
 ### Three things this audit found that guesswork would have missed
 
@@ -107,6 +122,32 @@ Not guesses — these come from parsing each site's `wp-sitemap.xml`:
 - store provenance (source URL, fetch timestamp) with every document, so anything can be removed on request
 
 A takedown request means we remove the source and re-run. Cheap, because the pipeline is re-runnable by design.
+
+### ⚠️ kknews.uz has an explicit anti-AI-crawler policy
+
+Its `robots.txt` reads, in part:
+
+```
+User-agent: SemrushBot     Disallow: /
+User-agent: ClaudeBot      Disallow: /
+User-agent: GPTBot         Disallow: /
+User-agent: OAI-SearchBot  Disallow: /
+User-agent: AhrefsBot      Disallow: /
+...
+User-agent: *              Allow: /
+                           Disallow: /wp-admin/
+```
+
+Read this carefully, because both halves are true:
+
+- **We are permitted.** `QaraqalpaqMindBot` matches `User-agent: *`, which is `Allow: /`. Our crawler obeys the file as written, and the 30-page test crawl was within the rules.
+- **The intent is visibly to keep AI training crawlers out.** The operators enumerated the AI crawlers they know by name and blocked them. A new bot they have never heard of is permitted only because they could not list it in advance.
+
+**Recommendation: get written permission before any full-site crawl of kknews.uz.** This is the flagship Karakalpak source and the project is a language-preservation effort that a state news agency has every reason to support — an email is likely to succeed, and it converts an awkward position into an endorsement. Until then, keep to small sampling runs.
+
+**Non-negotiable: never rename the User-Agent to evade a rule.** Presenting as `Googlebot`, or dropping the bot identity to look like a browser, turns a defensible grey area into plain deception. The `--insecure` and `respect_robots=False` switches exist for offline fixtures and self-owned hosts; the registry sets `respect_robots: true` on every source and a unit test enforces it.
+
+None of the other Tier 2 sources name AI crawlers in robots.txt.
 
 ---
 

@@ -74,6 +74,7 @@ serve = [
 dev = [
     "pytest>=8.3",
     "pytest-cov>=6.0",
+    "pytest-asyncio>=0.25",
     "ruff>=0.9",
     "mypy>=1.14",
     "pre-commit>=4.0",
@@ -96,7 +97,12 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "TC", "ANN", "RUF"]
 ignore = [
     "E501",    # line length is handled by the formatter
     "ANN401",  # Any is legitimate in generic config/JSON plumbing
-    "TC003",   # moving stdlib imports into TYPE_CHECKING blocks buys nothing here
+    # TYPE_CHECKING-only import blocks trade readability for a startup cost we
+    # do not have, and they break `from __future__ import annotations` idioms
+    # for anyone reading a module top-down.
+    "TC001",
+    "TC002",
+    "TC003",
     # Karakalpak Latin uses ı ó ń ǵ ú á and the corpus is full of Cyrillic.
     # The "ambiguous unicode character" rules would fire on almost every string
     # literal and every test fixture in this project. Non-negotiable off.
@@ -122,6 +128,8 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "slow: long-running tests (network, GPU)",
     "gpu: requires a CUDA device",
