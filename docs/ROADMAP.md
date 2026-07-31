@@ -27,13 +27,21 @@ One phase at a time. A phase is done when its deliverables exist, run, and are c
 | 2.1 Source audit — legality, quality, size, cadence, script | ✅ done, [docs/SOURCES.md](SOURCES.md) |
 | 2.2 `crawlers/core` — fetcher, robots, rate limiter, resume state, `qm crawl` | ✅ done |
 | 2.3 Tier 1 ingesters — Wikipedia dump + HF datasets | ✅ done |
-| 2.4 Tier 2 crawls at scale — kknews, joqargikenes, sud.uz, ndpi, qrdsm | ⏳ next |
-| 2.5 PDF/OCR path — National Library archive | stretch |
+| 2.4 Tier 2 crawls + HTML extraction | ✅ done (sud.uz still filling) |
+| 2.5 kknews permission, then crawl at scale | ⏳ blocked on a decision |
+| 2.6 PDF/OCR path — National Library archive | stretch |
 
-**Corpus in hand: 355,571 documents, 71.0 M characters, ~22.9 M estimated tokens**
-(measured, not projected — see [SOURCES.md](SOURCES.md#1-the-headline-number)).
+**Corpus in hand: 357,347 documents, 75.8 M characters, ~24.4 M estimated tokens**
+— measured by running the pipeline, not projected. See
+[SOURCES.md](SOURCES.md#1-the-headline-number).
 
-The initial ~250 MB estimate was revised down after ingestion: MADLAD-400 does not
-ship Karakalpak at all (−60 MB) and GlotCC-V1 has 172 documents rather than 30 MB
-(−28 MB). A defensible planning figure after dedup is **25–35 M unique tokens**,
-which makes Phase 5 an adaptation task and argues for LoRA over full fine-tuning.
+The ~250 MB opening estimate did not survive contact, in two stages:
+
+* **Tier 1** — MADLAD-400 ships no Karakalpak at all (−60 MB) and GlotCC-V1 has
+  172 documents rather than 30 MB (−28 MB). 174 MB estimated → 71 MB measured.
+* **Tier 2** — 78 MB estimated → ~11 MB projected. Karakalpak institutional
+  articles run 1,500–3,200 characters, not the 5–10 K assumed.
+
+Planning figure after dedup: **20–25 M unique tokens**. Phase 5 is therefore an
+adaptation task, and LoRA over full fine-tuning is a requirement rather than a
+preference.

@@ -6,13 +6,14 @@ Base model: **Qwen3-8B** → Continued Pretraining → SFT → DPO → RAG → v
 
 > **Status:** Phase 1 complete, Phase 2 in progress. See [docs/ROADMAP.md](docs/ROADMAP.md).
 >
-> **Corpus in hand: 355,571 documents / 71 M characters / ~23 M estimated tokens**, measured
-> by ingestion rather than estimated ([docs/SOURCES.md](docs/SOURCES.md)). An earlier
-> ~250 MB projection did not survive contact: MADLAD-400 ships no Karakalpak at all, and
-> GlotCC-V1 has 172 documents rather than 30 MB.
+> **Corpus in hand: 357,347 documents / 75.8 M characters / ~24.4 M estimated tokens**,
+> measured by running the pipeline rather than estimated ([docs/SOURCES.md](docs/SOURCES.md)).
+> An opening ~250 MB projection did not survive contact — MADLAD-400 ships no Karakalpak
+> at all, GlotCC-V1 has 172 documents rather than 30 MB, and the live Karakalpak web is
+> ~11 MB rather than 78 MB.
 >
 > That makes this an **adaptation** project, not a from-scratch one. Qwen3-8B saw ~36 T
-> tokens; ~25–35 M unique Karakalpak tokens after dedup is enough to teach a model that
+> tokens; ~20–25 M unique Karakalpak tokens after dedup is enough to teach a model that
 > already knows Kazakh, Uzbek and Turkish about this Kipchak relative — and not enough for
 > full-parameter fine-tuning, which is why Phase 5 defaults to LoRA.
 
@@ -141,7 +142,7 @@ pip install -e ".[dev,crawl,ingest]"
 | `.[ingest]` | 2 | datasets, huggingface-hub, mwparserfromhell |
 | `.[clean]` | 3 | datasketch, ftfy, fasttext |
 | `.[train]` | 5 | torch, transformers, trl, peft, deepspeed (Linux + CUDA) |
-| `.[rag]` | 9 | qdrant-client, sentence-transformers |
+| `.[rag]` | 9 | qdrant-client, sentence-tdoransformers |
 | `.[serve]` | 10 | vllm, fastapi, uvicorn |
 
 ---

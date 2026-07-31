@@ -13,10 +13,15 @@ The machine-readable version is [`configs/crawl/sources.yaml`](../configs/crawl/
 
 ## 1. The headline number
 
-> **Revised 2026-07-31 after actually ingesting Tier 1.** The first version of this
-> section estimated ~174 MB from bulk datasets. The measured figure is **71 MB**.
-> Two estimates were badly wrong and both are corrected below. Numbers in this
-> table are now *measured*, not projected.
+> **Revised twice on 2026-07-31, after ingesting Tier 1 and then crawling Tier 2.**
+> The first version of this audit projected ~250 MB total. The measured figure is
+> **~76 MB in hand, ~83 MB obtainable**. Bulk datasets came in at 71 MB against a
+> 174 MB estimate; the live web came in at ~11 MB against 78 MB.
+>
+> The lesson is worth keeping: **every estimate in this document that has since
+> been measured was too high, most by 3–20×.** Numbers below are labelled
+> *measured*, *projected* or *estimated*, and the estimated ones should be
+> assumed optimistic until someone runs the pipeline at them.
 
 ### Tier 1, measured by `qm ingest run`
 
@@ -40,20 +45,50 @@ fails with `BuilderConfig 'kaa' not found. Available: ['default']`. **−60 MB.*
 **GlotCC-V1 has 172 Karakalpak documents, not 30 MB.** Confirmed straight from
 the parquet metadata: 19 rows in `kaa-Latn`, 153 in `kaa-Cyrl`. **−28 MB.**
 
+### Tier 2, measured by crawling
+
+Same story, and it is worth stating plainly: **every web estimate in the first
+draft of this audit was roughly 7× too high.** These are extraction outputs from
+a real crawl, not projections.
+
+| Source | Docs | Chars | Chars/page | Crawl state | Est. → measured/projected |
+|---|---:|---:|---:|---|---|
+| `gov_jokargikenes` | 263 | 1.71 M | 6,348 | **complete** | 10 MB → **1.7 MB** |
+| `gov_qrdsm` | 579 | 1.00 M | 1,670 | 600/917 | 3 MB → ~1.5 MB |
+| `edu_ndpi` | 592 | 1.05 M | 1,755 | 600/819 | 5 MB → ~1.4 MB |
+| `gov_sud_cyrillic` | 142 | 0.47 M | 3,199 | 148/526 | 5 MB → ~1.7 MB |
+| `gov_sud_latin` | 135 | 0.38 M | 2,616 | 146/384 | 4 MB → ~1.0 MB |
+| `news_kknews` | 30 | 0.05 M | 1,553 | 30/263+ | 30 MB → ~3.1 MB |
+| `blog_shagalalab` | 35 | 0.10 M | 1,743 | **complete** | 1 MB → **0.1 MB** |
+| **Total** | **1,776** | **4.77 M** | | | 78 MB → **~11 MB projected** |
+
+**Why the estimates were wrong.** I sized each site as *article count × assumed
+article length*, and was wrong on both factors. Karakalpak institutional articles
+run 1,500–3,200 characters, not the 5–10 K a Western news site would give you;
+and the two sites crawled to completion (`jokargikenes`, `shagalalab`) show that
+even the article counts were optimistic once listing pages and duplicates are
+removed. Only `jokargikenes` is text-dense, at 6,348 chars/page — it publishes
+full legislative texts, which is exactly the formal register the corpus needs.
+
 ### What this means
 
-| | Karakalpak text |
-|---|---|
-| Tier 1 bulk datasets, **measured** | **71 MB / ~23 M tokens** |
-| Verified live web, estimated | ~50–78 MB |
-| Needs permission (kitapxana, sozlik) | ~28 MB |
-| **Realistic ceiling** | **~150 MB / ~45 M tokens** |
+| | Karakalpak text | Basis |
+|---|---|---|
+| Tier 1 bulk datasets | **71.0 MB / 22.9 M tokens** | measured |
+| Tier 2 live web, crawled so far | **4.8 MB / 1.5 M tokens** | measured |
+| Tier 2 remaining at current frontier | ~3.1 MB | projected from chars/page |
+| Needs permission (kitapxana, sozlik) | ~28 MB | unverified estimate — treat sceptically |
+| **Total obtainable without permission** | **~83 MB / ~27 M tokens** | |
 
 And that is *before* deduplication. Expect real losses: GlotCC is largely scraped
-`kaa.wikipedia`, so it overlaps `wiki_kaa` almost entirely, and `dilmash` draws
-23% of its pairs from news sources we are also crawling.
+`kaa.wikipedia`, so it overlaps `wiki_kaa` almost entirely; `dilmash` draws 23% of
+its pairs from news; and Blogger/WordPress archive pages re-render the same posts.
 
-**A defensible working figure is 25–35 M unique tokens.**
+**A defensible working figure is 20–25 M unique tokens.**
+
+Given the estimating record above, treat the ~28 MB permission-gated figure with
+suspicion too. `kitapxana.com` is a real literary library and the highest-value
+target left, but nobody has measured it.
 
 This does not change the plan, but it sharpens it. At this scale, continued
 pretraining is **adaptation**, not language acquisition: we are teaching a model

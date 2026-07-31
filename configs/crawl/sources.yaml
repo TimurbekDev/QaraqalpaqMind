@@ -182,7 +182,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: daily
-    est_size_mb: 30.0
+    est_size_mb: 3.1
     quality: 4
     scripts: [latin]
     allowed_paths: ["/qq/"]
@@ -222,7 +222,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: weekly
-    est_size_mb: 10.0
+    est_size_mb: 1.7
     quality: 5
     scripts: [latin]
     allowed_paths: ["/qr/"]
@@ -245,7 +245,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: weekly
-    est_size_mb: 4.0
+    est_size_mb: 1.0
     quality: 5
     scripts: [latin]
     allowed_paths: ["/qql/"]
@@ -265,7 +265,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: weekly
-    est_size_mb: 5.0
+    est_size_mb: 1.7
     quality: 5
     scripts: [cyrillic]
     allowed_paths: ["/qqc/"]
@@ -287,7 +287,7 @@ sources:
     legal: fair_use_train
     license: unknown
     update_frequency: weekly
-    est_size_mb: 5.0
+    est_size_mb: 1.4
     quality: 4
     scripts: [latin]
     allowed_paths: ["/qq/"]
@@ -307,7 +307,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: weekly
-    est_size_mb: 3.0
+    est_size_mb: 1.5
     quality: 4
     scripts: [latin]
     denied_paths: ["/ru/", "/uz/", "/en/", "/wp-admin/"]
@@ -354,7 +354,7 @@ sources:
     legal: fair_use_train
     license: unknown
     update_frequency: rarely
-    est_size_mb: 1.0
+    est_size_mb: 0.1
     quality: 4
     scripts: [cyrillic]
     delay_seconds: 4.0

@@ -1,0 +1,17 @@
+{
+  "source_id": "news_kknews",
+  "created_at": "2026-07-31T12:32:54.404807Z",
+  "license": "unknown",
+  "source_url": "https://kknews.uz/qq/",
+  "path": "D:/Dev/open-source/QaraqalpaqMind/data/interim/news_kknews.jsonl.zst",
+  "sha256": "1d64340bbe6d8b4368565c5906cbfa019bc953288ee40ea447de305ee05d7633",
+  "size_bytes": 15793,
+  "documents": 30,
+  "characters": 46579,
+  "words": 5369,
+  "estimated_tokens": 15026,
+  "scripts": {
+    "latin": 25,
+    "mixed": 5
+  }
+}

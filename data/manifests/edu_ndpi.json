@@ -1,0 +1,18 @@
+{
+  "source_id": "edu_ndpi",
+  "created_at": "2026-07-31T12:30:42.370643Z",
+  "license": "unknown",
+  "source_url": "https://ndpi.uz/qq/",
+  "path": "D:/Dev/open-source/QaraqalpaqMind/data/interim/edu_ndpi.jsonl.zst",
+  "sha256": "fd310efce4be4be9fa3db3ffab40e6e315819039c20060543427bdcc909e5b51",
+  "size_bytes": 322334,
+  "documents": 592,
+  "characters": 1053246,
+  "words": 135929,
+  "estimated_tokens": 339749,
+  "scripts": {
+    "latin": 466,
+    "cyrillic": 108,
+    "mixed": 18
+  }
+}
