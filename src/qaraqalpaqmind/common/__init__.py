@@ -10,10 +10,12 @@ from .config import StrictModel, load_config, load_raw
 from .io import count_lines, file_sha256, read_jsonl, text_sha1, write_jsonl
 from .logging import get_logger, setup_logging
 from .paths import (
+    CONFIGS_DIR,
     DATA_DIR,
     DATASETS_DIR,
     INTERIM_DIR,
     LOGS_DIR,
+    MANIFESTS_DIR,
     MODELS_DIR,
     PROCESSED_DIR,
     PROJECT_ROOT,
@@ -22,10 +24,12 @@ from .paths import (
 )
 
 __all__ = [
+    "CONFIGS_DIR",
     "DATASETS_DIR",
     "DATA_DIR",
     "INTERIM_DIR",
     "LOGS_DIR",
+    "MANIFESTS_DIR",
     "MODELS_DIR",
     "PROCESSED_DIR",
     "PROJECT_ROOT",

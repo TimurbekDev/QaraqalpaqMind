@@ -1,0 +1,503 @@
+# Karakalpak (kaa) data source registry.
+#
+# RULE: nothing is crawled unless it is declared here. Adding a domain means
+# opening a diff that states its licence, legal basis and rate limit, so the
+# decision is reviewed rather than improvised inside a scraper.
+#
+# Field meanings: src/qaraqalpaqmind/crawlers/core/registry.py
+# Human-readable audit: docs/SOURCES.md
+# Live verification:    python scripts/audit_sources.py --include-disabled
+#
+# `est_size_mb` is *Karakalpak text after extraction*, not download size.
+# `quality`: 1 machine noise | 2 raw web | 3 usable | 4 edited | 5 curated prose
+# `priority`: 1 fetch first ... 5 last
+# `verified_on` means a live probe confirmed the URL serves Karakalpak.
+
+version: 1
+contact_email: ${QM_CONTACT_EMAIL:contact@example.com}
+user_agent: ${QM_USER_AGENT:QaraqalpaqMindBot/0.1 (+https://github.com/timurbek/QaraqalpaqMind)}
+
+sources:
+  # =====================================================================
+  # TIER 1 - open licence, bulk download, zero crawl load.
+  # =====================================================================
+
+  - id: wiki_kaa
+    name: Karakalpak Wikipedia (kaa)
+    kind: wiki
+    access: dump
+    url: https://dumps.wikimedia.org/kaawiki/
+    legal: open_license
+    license: CC-BY-SA-4.0
+    update_frequency: weekly
+    est_size_mb: 22.0
+    quality: 4
+    scripts: [latin]
+    priority: 1
+    verified_on: 2026-07-31
+    notes: >-
+      ~11.5k articles as of March 2026 (was <2k in 2023 - the wiki is growing
+      fast). Official dumps, so no crawling at all. Expect a large share of
+      template-generated geography stubs; Phase 3 length and dedup filters
+      will thin them.
+
+  - id: hf_karakalpak_corpus_v2
+    name: bekan/karakalpak_corpus_v2_m
+    kind: dataset
+    access: hf
+    url: https://huggingface.co/datasets/bekan/karakalpak_corpus_v2_m
+    legal: open_license
+    license: MIT
+    update_frequency: rarely
+    est_size_mb: 21.4
+    quality: 4
+    scripts: [latin]
+    priority: 1
+    verified_on: 2026-07-31
+    notes: >-
+      135,667 sentences, ~2.2M words, 21.4 MB. Literary + educational + news +
+      public-domain sources. Sentence-level only, so document structure is
+      already lost: good for CPT, useless for long-context training.
+
+  - id: hf_dilmash_parallel
+    name: tahrirchi/dilmash (kaa-uz/ru/en parallel)
+    kind: parallel
+    access: hf
+    url: https://huggingface.co/datasets/tahrirchi/dilmash
+    legal: open_license
+    license: MIT
+    update_frequency: rarely
+    est_size_mb: 40.0
+    quality: 5
+    scripts: [latin]
+    priority: 1
+    verified_on: 2026-07-31
+    notes: >-
+      300k pairs (100k each kaa-en / kaa-ru / kaa-uz) from OLDI, arXiv:2409.04269.
+      Composition: 34% books, 24% dictionaries, 23% news, 19% textbooks, plus
+      4k Gatitos pairs. Backbone of the Phase 6 translation SFT set and a clean
+      monolingual Karakalpak source in its own right.
+
+  - id: flores_plus_kaa
+    name: FLORES+ dev/devtest (kaa_Latn)
+    kind: parallel
+    access: hf
+    url: https://huggingface.co/datasets/openlanguagedata/flores_plus
+    legal: open_license
+    license: CC-BY-SA-4.0
+    update_frequency: rarely
+    est_size_mb: 0.5
+    quality: 5
+    scripts: [latin]
+    priority: 1
+    verified_on: 2026-07-31
+    notes: >-
+      HELD OUT - NEVER TRAIN ON THIS. Human-translated benchmark. Phase 3 dedup
+      must blocklist these sentences against every training split, or Phase 8
+      translation scores become meaningless.
+
+  - id: madlad400_kaa
+    name: MADLAD-400 (kaa split)
+    kind: dataset
+    access: hf
+    url: https://huggingface.co/datasets/allenai/MADLAD-400
+    legal: open_license
+    license: ODC-BY-1.0
+    update_frequency: static
+    est_size_mb: 60.0
+    quality: 2
+    scripts: [latin, cyrillic]
+    priority: 2
+    verified_on: 2026-07-31
+    notes: >-
+      Common Crawl derived and audited, but still noisy. Expect Uzbek/Kazakh
+      leakage and heavy boilerplate; run our own language ID over it. Volume is
+      the point, not quality. Overlaps GlotCC substantially - dedup jointly.
+
+  - id: glotcc_kaa
+    name: GlotCC-V1 (kaa)
+    kind: dataset
+    access: hf
+    url: https://huggingface.co/datasets/cis-lmu/GlotCC-V1
+    legal: open_license
+    license: CC0-1.0
+    update_frequency: rarely
+    est_size_mb: 30.0
+    quality: 2
+    scripts: [latin, cyrillic]
+    priority: 2
+    verified_on: 2026-07-31
+    notes: Document-level CommonCrawl corpus with GlotLID labels. Heavy overlap with MADLAD-400.
+
+  - id: nllb_kaa
+    name: NLLB mined bitext (kaa_Latn)
+    kind: parallel
+    access: hf
+    url: https://huggingface.co/datasets/allenai/nllb
+    legal: open_license
+    license: CC-BY-NC-4.0
+    update_frequency: static
+    est_size_mb: 25.0
+    quality: 2
+    scripts: [latin]
+    priority: 4
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      DISABLED - LICENCE. CC-BY-NC forbids commercial use; mixing it into the
+      pretraining corpus would contaminate the licence of the released weights.
+      Machine-mined pairs, so quality is mediocre anyway. Enable only if the
+      project accepts a non-commercial release.
+
+  # =====================================================================
+  # TIER 2 - VERIFIED live Karakalpak web. Probed 2026-07-31; every entry
+  # below returned Karakalpak text with a detector score >= 0.88.
+  # =====================================================================
+
+  - id: news_kknews
+    name: Qaraqalpaqstan Xabar Agentligi (QXA)
+    kind: news
+    access: crawl
+    url: https://kknews.uz/qq/
+    legal: government_work
+    license: unknown
+    update_frequency: daily
+    est_size_mb: 30.0
+    quality: 4
+    scripts: [latin]
+    allowed_paths: ["/qq/"]
+    denied_paths: ["/ru/", "/uz/", "/en/", "/search", "/tag/", "/wp-admin/"]
+    delay_seconds: 2.0
+    priority: 1
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=1.00, latin_2016. State news agency of Karakalpakstan and
+      the best live Karakalpak news feed. WordPress: sitemap index at
+      /sitemap.xml with 12 children; wp-sitemap-posts-post-3.xml alone lists
+      1,785 URLs, while children 1 and 2 currently return HTTP 500 - the
+      crawler must tolerate broken sitemap children and fall back to link
+      discovery. robots.txt allows us.
+
+  - id: gov_jokargikenes
+    name: Joqarǵı Keńes (Karakalpakstan parliament)
+    kind: government
+    access: crawl
+    url: https://joqargikenes.uz/qr/
+    legal: government_work
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 10.0
+    quality: 5
+    scripts: [latin]
+    allowed_paths: ["/qr/"]
+    denied_paths: ["/ru/", "/uz/", "/en/"]
+    delay_seconds: 3.0
+    priority: 1
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=0.94, latin_2016, ~15k chars on the landing page alone.
+      NOTE the locale segment is `/qr/`, not `/qq/` - the bare domain redirects
+      there. No sitemap.xml, so this needs link-following. Legislative and
+      decree text: the most formal register we have access to, which balances a
+      corpus otherwise dominated by journalism.
+
+  - id: gov_sud_latin
+    name: Karakalpakstan judiciary (Latin locale)
+    kind: government
+    access: crawl
+    url: https://qaraqalpaqstan.sud.uz/qql/
+    legal: government_work
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 4.0
+    quality: 5
+    scripts: [latin]
+    allowed_paths: ["/qql/"]
+    denied_paths: ["/ru/", "/uz/", "/qqc/"]
+    delay_seconds: 3.0
+    priority: 2
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=1.00, latin_2016. wp-sitemap lists 348 posts under /qql/.
+      Long-form legal analysis - excellent register diversity.
+
+  - id: gov_sud_cyrillic
+    name: Karakalpakstan judiciary (Cyrillic locale)
+    kind: government
+    access: crawl
+    url: https://qaraqalpaqstan.sud.uz/qqc/
+    legal: government_work
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 5.0
+    quality: 5
+    scripts: [cyrillic]
+    allowed_paths: ["/qqc/"]
+    denied_paths: ["/ru/", "/uz/", "/qql/"]
+    delay_seconds: 3.0
+    priority: 2
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=1.00, Cyrillic. 496 posts - MORE than the Latin locale.
+      Rare find: the same institution publishing the same register in both
+      scripts. This is near-parallel Latin/Cyrillic data and is therefore the
+      ideal training and validation set for the Phase 3 transliterator.
+
+  - id: edu_ndpi
+    name: Nókis Mámleketlik Pedagogikalıq Institutı (Ájiniyaz)
+    kind: education
+    access: crawl
+    url: https://ndpi.uz/qq/
+    legal: fair_use_train
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 5.0
+    quality: 4
+    scripts: [latin]
+    allowed_paths: ["/qq/"]
+    denied_paths: ["/ru/", "/uz/", "/en/", "/wp-admin/"]
+    delay_seconds: 3.0
+    priority: 2
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=1.00, latin_2016. wp-sitemap: 300 posts + 169 pages.
+      Academic and administrative prose, plus scattered lecture material.
+
+  - id: gov_qrdsm
+    name: Karakalpakstan Ministry of Health
+    kind: government
+    access: crawl
+    url: https://qrdsm.uz/
+    legal: government_work
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 3.0
+    quality: 4
+    scripts: [latin]
+    denied_paths: ["/ru/", "/uz/", "/en/", "/wp-admin/"]
+    delay_seconds: 3.0
+    priority: 3
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=0.88, latin_2016. wp-sitemap: 352 posts. One of the few
+      sources of Karakalpak medical and public-health vocabulary.
+
+  - id: lit_kitapxana
+    name: kitapxana.com - Karakalpak literature e-library
+    kind: literature
+    access: crawl
+    url: http://kitapxana.com/
+    legal: permission_needed
+    license: unknown
+    update_frequency: rarely
+    est_size_mb: 25.0
+    quality: 5
+    scripts: [cyrillic]
+    delay_seconds: 4.0
+    priority: 2
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=1.00, Cyrillic. "Qaraqalpaq ádebiyatınıń elektron
+      kitapxanası" - full literary works organised by category and author.
+      Per megabyte this is the highest-quality Karakalpak prose on the open web.
+      TWO BLOCKERS, hence disabled:
+      (1) LICENCE - literary works are in copyright unless the author died
+          >70 years ago. Contact the operators (linked to shagalalab.com)
+          before any bulk fetch, and until then treat this as read-only.
+      (2) TRANSPORT - the site serves the library over plain HTTP only; the
+          HTTPS vhost on the same name resolves to a different site
+          (sozlik.com). Fetch over http:// deliberately or you silently
+          collect the wrong corpus.
+
+  - id: blog_shagalalab
+    name: Shagala Lab (Karakalpak software blog)
+    kind: blog
+    access: crawl
+    url: https://www.shagalalab.com/
+    legal: fair_use_train
+    license: unknown
+    update_frequency: rarely
+    est_size_mb: 1.0
+    quality: 4
+    scripts: [cyrillic]
+    delay_seconds: 4.0
+    priority: 4
+    verified_on: 2026-07-31
+    notes: >-
+      VERIFIED kaa=1.00, Cyrillic. Small Blogger site, but it is one of the only
+      places Karakalpak *technical* vocabulary is written down (software,
+      keyboards, weather apps). Disproportionately useful for Phase 6 coding
+      and technical-instruction data. Operators of kitapxana.com and sozlik.com.
+
+  # =====================================================================
+  # TIER 3 - blocked, dead or wrong-language. Kept as a record so nobody
+  # re-investigates them. Every entry states WHY it failed.
+  # =====================================================================
+
+  - id: gov_sovminrk
+    name: Council of Ministers of Karakalpakstan
+    kind: government
+    access: crawl
+    url: https://sovminrk.gov.uz/
+    legal: government_work
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 8.0
+    quality: 4
+    scripts: [latin]
+    delay_seconds: 4.0
+    priority: 3
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      BLOCKED. Returns HTTP 503 on every path, and its TLS certificate has
+      expired ("certificate verify failed: certificate has expired"). The host
+      exists, so this is worth re-probing monthly - the executive branch would
+      be a high-value formal-register source if it comes back.
+
+  - id: edu_karsu
+    name: Karakalpak State University (Berdaq)
+    kind: education
+    access: crawl
+    url: https://karsu.uz/qq
+    legal: fair_use_train
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 5.0
+    quality: 3
+    scripts: [latin]
+    delay_seconds: 3.0
+    priority: 4
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      BLOCKED - CLIENT-RENDERED. Returns HTTP 200 with zero extractable text;
+      sitemap.xml is an empty urlset. A JavaScript SPA. Needs either a headless
+      browser or its JSON API. Deferred: not worth a Playwright dependency for
+      an estimated 5 MB until Tier 2 is exhausted.
+
+  - id: edu_kkmi
+    name: Karakalpak Medical Institute
+    kind: education
+    access: crawl
+    url: https://kkmi.uz/qq/
+    legal: fair_use_train
+    license: unknown
+    update_frequency: monthly
+    est_size_mb: 2.0
+    quality: 3
+    scripts: [cyrillic]
+    delay_seconds: 3.0
+    priority: 5
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      NEEDS PER-PAGE CHECK. The /qq/ landing page scores kaa=0.00 despite the
+      locale name - it renders Russian. But wp-sitemap lists 87 posts and 103
+      pages under /qq/, so some articles may genuinely be Karakalpak. Re-probe
+      individual articles before enabling; do not trust the locale segment.
+
+  - id: gov_lex_uz
+    name: Lex.uz national legislation database
+    kind: government
+    access: crawl
+    url: https://lex.uz/
+    legal: government_work
+    license: unknown
+    update_frequency: weekly
+    est_size_mb: 0.0
+    quality: 5
+    scripts: [latin]
+    delay_seconds: 4.0
+    priority: 5
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      NO KARAKALPAK. /kaa and /qq both return the 404 page; the site publishes
+      Uzbek (Latin and Cyrillic) and Russian only. Karakalpakstan legislation
+      is instead reachable through joqargikenes.uz.
+
+  - id: uza_kaa
+    name: UzA national news agency, Karakalpak edition
+    kind: news
+    access: crawl
+    url: https://uza.uz/
+    legal: government_work
+    license: unknown
+    update_frequency: daily
+    est_size_mb: 0.0
+    quality: 4
+    scripts: [latin]
+    delay_seconds: 3.0
+    priority: 5
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      NO KARAKALPAK EDITION. Probed /kaa, /qq and /kk - all 404. UzA publishes
+      oz, uz, ru, en and several others, but not Karakalpak.
+
+  - id: news_erkinqq
+    name: Erkin Qaraqalpaqstan (newspaper, est. 1924)
+    kind: news
+    access: manual
+    url: https://kknews.uz/qq/
+    legal: government_work
+    license: unknown
+    update_frequency: daily
+    est_size_mb: 0.0
+    quality: 5
+    scripts: [latin, cyrillic]
+    priority: 5
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      NO WEB PRESENCE FOUND. The republic's flagship newspaper since 1924 and
+      the best-edited Karakalpak prose in existence, but erkinqq.uz and
+      erkinqaraqalpaqstan.uz do not resolve. Its centenary materials are held
+      by the National Library digital archive (rlps.natlib.uz) as scanned PDFs,
+      which means OCR. Tracked as a Phase 2 stretch goal. The `url` field
+      points at kknews.uz only to satisfy schema validation - do not crawl it
+      under this id.
+
+  - id: dict_sozlik
+    name: sozlik.com - Karakalpak dictionaries
+    kind: dictionary
+    access: crawl
+    url: https://sozlik.com/
+    legal: permission_needed
+    license: unknown
+    update_frequency: rarely
+    est_size_mb: 3.0
+    quality: 5
+    scripts: [latin, cyrillic]
+    delay_seconds: 4.0
+    priority: 3
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      CLIENT-RENDERED. "Qaraqalpaqsha sózlikler"; the landing page yields 34
+      characters, so lookups happen through an API we have not mapped. Worth
+      the effort later: dictionaries anchor morphology and convert directly
+      into Phase 6 word-sense and definition SFT items. Same operators as
+      kitapxana.com - ask for all three at once.
+
+  - id: religious_jw_kaa
+    name: JW.org Karakalpak publications
+    kind: religious
+    access: manual
+    url: https://www.jw.org/kaa/
+    legal: permission_needed
+    license: proprietary
+    update_frequency: monthly
+    est_size_mb: 15.0
+    quality: 5
+    scripts: [latin, cyrillic]
+    priority: 5
+    enabled: false
+    verified_on: 2026-07-31
+    notes: >-
+      EXCLUDED BY POLICY. Large, professionally translated, and one of the
+      biggest bodies of modern Karakalpak prose - but the terms of use forbid
+      redistribution, and the register is narrow enough that heavy inclusion
+      would visibly skew the model's voice. Left off unless a licence is granted.

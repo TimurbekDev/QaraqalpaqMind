@@ -20,4 +20,15 @@ One phase at a time. A phase is done when its deliverables exist, run, and are c
 
 ## Current position
 
-**Phase 1 complete.** Next: Phase 2 — source audit before a single line of scraper code.
+**Phase 1 complete. Phase 2 in progress.**
+
+| Step | State |
+|---|---|
+| 2.1 Source audit — legality, quality, size, cadence, script | ✅ done, [docs/SOURCES.md](SOURCES.md) |
+| 2.2 `crawlers/core` — HTTP client, robots, rate limiter, resume state | ⏳ next |
+| 2.3 Tier 1 ingesters — Wikipedia dump + HF datasets | |
+| 2.4 Tier 2 crawlers — kknews, joqargikenes, sud.uz, ndpi, qrdsm | |
+| 2.5 PDF/OCR path — National Library archive | stretch |
+
+Audit outcome: **~250 MB** of Karakalpak text realistically obtainable (~60–75M tokens),
+7 live web sources verified, 6 open-licence bulk datasets identified.

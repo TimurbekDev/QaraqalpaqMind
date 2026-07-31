@@ -4,7 +4,9 @@ An open-source Large Language Model stack for the **Karakalpak** language (*qara
 
 Base model: **Qwen3-8B** → Continued Pretraining → SFT → DPO → RAG → vLLM serving → Next.js chat UI.
 
-> **Status:** Phase 1 of 13 complete (project architecture). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** Phase 1 complete, Phase 2 in progress. See [docs/ROADMAP.md](docs/ROADMAP.md).
+> The Karakalpak data landscape is audited in [docs/SOURCES.md](docs/SOURCES.md) — ~250 MB
+> of text is realistically obtainable, which is an *adaptation* budget, not a from-scratch one.
 
 ---
 
@@ -127,7 +129,7 @@ pip install -e ".[serve]"   # Phase 10
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1 | Project architecture & shared foundation | ✅ done |
-| 2 | Data collection (crawlers, legality, source audit) | ⏳ next |
+| 2 | Data collection (crawlers, legality, source audit) | 🔨 audit done, crawlers next |
 | 3 | Cleaning & deduplication pipeline | |
 | 4 | Dataset schemas (JSONL) + tokenizer analysis | |
 | 5 | Continued pretraining (Qwen3-8B) | |
