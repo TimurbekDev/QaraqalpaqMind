@@ -98,6 +98,16 @@ class SourceSpec(StrictModel):
     verified_on: date | None = None
     notes: str = ""
 
+    held_out: bool = Field(
+        default=False,
+        description=(
+            "Evaluation data. Ingested, but structurally excluded from cleaning and "
+            "deduplication so it can never reach a training set. A note saying HELD "
+            "OUT is not enough - `qm clean all` would sweep it into processed/ and "
+            "deduplication reads everything there."
+        ),
+    )
+
     @field_validator("scripts")
     @classmethod
     def _known_scripts(cls, value: list[str]) -> list[str]:
@@ -145,6 +155,10 @@ class SourceRegistry(StrictModel):
 
     def total_estimated_mb(self) -> float:
         return round(sum(s.est_size_mb for s in self.sources if s.enabled), 1)
+
+    def held_out_ids(self) -> frozenset[str]:
+        """Source ids that must never reach a training set."""
+        return frozenset(spec.id for spec in self.sources if spec.held_out)
 
 
 def load_registry(path: str = "crawl/sources.yaml") -> SourceRegistry:

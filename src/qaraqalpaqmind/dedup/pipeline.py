@@ -72,10 +72,20 @@ def source_priority(registry: SourceRegistry) -> dict[str, tuple[int, int, str]]
 def _load_all(processed_dir: Path, registry: SourceRegistry) -> list[Document]:
     """Read every processed document, ordered so better sources come first."""
     ranking = source_priority(registry)
+    held_out = registry.held_out_ids()
     documents: list[Document] = []
 
     for path in sorted(processed_dir.glob("*.jsonl.zst")):
         source_id = path.name.split(".")[0]
+        if source_id in held_out:
+            # Belt and braces: cleaning already refuses to write held-out data
+            # here, but a stale file from before that rule would otherwise be
+            # loaded straight into the training set.
+            logger.warning(
+                "Refusing to read held-out source into a training set",
+                extra={"source": source_id, "path": str(path)},
+            )
+            continue
         count = 0
         for row in read_jsonl(path):
             documents.append(Document.model_validate(row))

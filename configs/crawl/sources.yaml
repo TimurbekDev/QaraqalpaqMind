@@ -95,11 +95,19 @@ sources:
     quality: 5
     scripts: [latin]
     priority: 1
+    held_out: true
     verified_on: 2026-07-31
     notes: >-
-      HELD OUT - NEVER TRAIN ON THIS. Human-translated benchmark. Phase 3 dedup
-      must blocklist these sentences against every training split, or Phase 8
-      translation scores become meaningless.
+      HELD OUT - NEVER TRAIN ON THIS. `held_out: true` is what enforces it:
+      cleaning skips this source and deduplication refuses to read it, so it
+      cannot reach a training set even by accident. A prose note alone was not
+      enough - `qm clean all` would have swept it into processed/, which
+      deduplication reads in its entirety.
+
+      1,012 devtest documents, human-translated. Note the Hub ships `devtest`
+      only for kaa_Latn; most FLORES+ languages also have `dev`.
+      Its sentences additionally form the contamination blocklist, so any
+      training document quoting one is dropped.
 
   - id: madlad400_kaa
     name: MADLAD-400 (kaa split)

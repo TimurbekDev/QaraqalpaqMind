@@ -68,7 +68,9 @@ MAPPINGS: dict[str, HFMapping] = {
     "flores_plus_kaa": HFMapping(
         repo="openlanguagedata/flores_plus",
         config="kaa_Latn",
-        splits=("dev", "devtest"),
+        # Verified against the Hub, not assumed: kaa_Latn ships `devtest` only.
+        # Most FLORES+ languages have both dev and devtest; this one does not.
+        splits=("devtest",),
         text_fields=("text",),
         held_out=True,
         gated=True,

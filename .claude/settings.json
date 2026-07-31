@@ -3,7 +3,14 @@
     "allow": [
       "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe tokenizer count 2>&1 | Select-Object -Last 6)",
       "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_fertility.py -q 2>&1)",
-      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg8.txt\" 2>&1)"
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg8.txt\" 2>&1)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\mypy.exe src/qaraqalpaqmind 2>&1)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\qm.exe doctor)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe ingest run flores_plus_kaa 2>&1 | Select-Object -Last 6; Write-Output \"=== BLOCKLIST ===\"; .\\\\.venv\\\\Scripts\\\\qm.exe dedup blocklist 2>&1 | Select-Object -Last 4)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_heldout.py -q 2>&1)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe dedup run 2>&1 | Select-Object -Last 14)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe dedup run 2>&1 | Select-String -Pattern \"contamination|kept|read|exact|near\" | Select-Object -First 8)",
+      "Bash(PYTHONIOENCODING=utf-8 ./.venv/Scripts/python.exe -c ' *)"
     ]
   }
 }

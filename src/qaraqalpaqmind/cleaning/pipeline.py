@@ -125,6 +125,17 @@ def clean_source(
     if not source_path.exists():
         raise FileNotFoundError(f"No interim data for '{source_id}': {source_path}")
 
+    # Guard the single-source path too. `clean_source` is callable directly, and
+    # cleaning a benchmark into processed/ is unrecoverable without noticing.
+    from ..crawlers.core.registry import load_registry
+
+    if source_id in load_registry().held_out_ids():
+        raise ValueError(
+            f"'{source_id}' is held-out evaluation data and must never be cleaned "
+            "into data/processed/, which deduplication reads in full. It is already "
+            "ingested for use as a benchmark and as the contamination blocklist."
+        )
+
     cfg = filter_config or FilterConfig()
     stats = CleanStats(source_id=source_id)
     rejected: list[dict[str, object]] = []
@@ -173,6 +184,23 @@ def clean_source(
     return stats
 
 
-def available_sources() -> list[str]:
-    """Source ids with interim data on disk."""
-    return sorted(p.name.split(".")[0] for p in INTERIM_DIR.glob("*.jsonl.zst"))
+def available_sources(*, include_held_out: bool = False) -> list[str]:
+    """Source ids with interim data on disk, excluding held-out evaluation data.
+
+    FLORES+ lives in `data/interim/` like everything else, but cleaning it would
+    put it in `data/processed/`, which deduplication reads in full - turning the
+    benchmark into training data. The exclusion is structural rather than a
+    naming convention, because a convention is something a future caller can
+    forget.
+    """
+    from ..crawlers.core.registry import load_registry
+
+    sources = sorted(p.name.split(".")[0] for p in INTERIM_DIR.glob("*.jsonl.zst"))
+    if include_held_out:
+        return sources
+
+    held_out = load_registry().held_out_ids()
+    for source in sources:
+        if source in held_out:
+            logger.info("Skipping held-out source", extra={"source": source})
+    return [source for source in sources if source not in held_out]

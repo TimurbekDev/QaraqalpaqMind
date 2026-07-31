@@ -50,11 +50,25 @@ def version() -> None:
 def doctor() -> None:
     """Check that the environment is set up correctly (paths, optional deps, GPU)."""
     from .common import paths
+    from .common.env import has_secret, project_env_file
 
     typer.secho(f"project root : {paths.PROJECT_ROOT}", fg=typer.colors.CYAN)
     typer.secho(f"data dir     : {paths.DATA_DIR}", fg=typer.colors.CYAN)
     typer.secho(f"models dir   : {paths.MODELS_DIR}", fg=typer.colors.CYAN)
     typer.secho(f"logs dir     : {paths.LOGS_DIR}", fg=typer.colors.CYAN)
+
+    env_file = project_env_file()
+    typer.secho(
+        f".env         : {'loaded' if env_file.is_file() else 'not found'} ({env_file})",
+        fg=typer.colors.CYAN if env_file.is_file() else typer.colors.YELLOW,
+    )
+    # Presence only. A token must never be printed, logged or echoed.
+    for secret in ("HF_TOKEN", "WANDB_API_KEY"):
+        configured = has_secret(secret)
+        typer.secho(
+            f"{secret:<13}: {'configured' if configured else 'not set'}",
+            fg=typer.colors.GREEN if configured else typer.colors.YELLOW,
+        )
 
     for label, module in (
         ("crawl", "httpx"),
