@@ -5,8 +5,16 @@ An open-source Large Language Model stack for the **Karakalpak** language (*qara
 Base model: **Qwen3-8B** → Continued Pretraining → SFT → DPO → RAG → vLLM serving → Next.js chat UI.
 
 > **Status:** Phase 1 complete, Phase 2 in progress. See [docs/ROADMAP.md](docs/ROADMAP.md).
-> The Karakalpak data landscape is audited in [docs/SOURCES.md](docs/SOURCES.md) — ~250 MB
-> of text is realistically obtainable, which is an *adaptation* budget, not a from-scratch one.
+>
+> **Corpus in hand: 355,571 documents / 71 M characters / ~23 M estimated tokens**, measured
+> by ingestion rather than estimated ([docs/SOURCES.md](docs/SOURCES.md)). An earlier
+> ~250 MB projection did not survive contact: MADLAD-400 ships no Karakalpak at all, and
+> GlotCC-V1 has 172 documents rather than 30 MB.
+>
+> That makes this an **adaptation** project, not a from-scratch one. Qwen3-8B saw ~36 T
+> tokens; ~25–35 M unique Karakalpak tokens after dedup is enough to teach a model that
+> already knows Kazakh, Uzbek and Turkish about this Kipchak relative — and not enough for
+> full-parameter fine-tuning, which is why Phase 5 defaults to LoRA.
 
 ---
 
@@ -95,35 +103,73 @@ QaraqalpaqMind/
 
 ## Quick start
 
+**Python 3.12 is required, not 3.13+** — torch, vLLM, flash-attn and DeepSpeed publish
+wheels for 3.12 first, and newer interpreters force source builds against CUDA.
+
 ```bash
-# 1. Python 3.12 (NOT 3.13/3.14 - torch, vLLM and flash-attn have no wheels there yet)
-py -3.12 -m venv .venv          # Windows
-# python3.12 -m venv .venv      # Linux
+# 1. Toolchain. uv installs its own private 3.12 and never touches your system Python.
+winget install --id astral-sh.uv -e     # Windows;  macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
+uv python install 3.12
+uv venv --python 3.12
 
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux
-
-# 2. Install the core package in editable mode
-pip install -e ".[dev]"
+# 2. Install
+uv pip install -e ".[dev,crawl,ingest]"
 
 # 3. Configure
-copy .env.example .env          # Windows
-# cp .env.example .env          # Linux
+cp .env.example .env                    # Windows: copy .env.example .env
 
 # 4. Verify
-qm version
-qm doctor
+uv run qm version
+uv run qm doctor
 ```
 
-`qm doctor` prints which optional extras are installed. Install them as you reach each phase:
+<details>
+<summary>Without uv (stdlib venv + pip)</summary>
 
 ```bash
-pip install -e ".[crawl]"   # Phase 2
-pip install -e ".[clean]"   # Phase 3
-pip install -e ".[train]"   # Phase 5  (Linux + CUDA)
-pip install -e ".[rag]"     # Phase 9
-pip install -e ".[serve]"   # Phase 10
+py -3.12 -m venv .venv          # Windows;  Linux: python3.12 -m venv .venv
+.venv\Scripts\activate          # Linux: source .venv/bin/activate
+pip install -e ".[dev,crawl,ingest]"
 ```
+</details>
+
+`qm doctor` prints which optional extras are installed. Add them as you reach each phase:
+
+| Extra | Phase | For |
+|---|---|---|
+| `.[crawl]` | 2 | httpx, trafilatura, selectolax, pypdf |
+| `.[ingest]` | 2 | datasets, huggingface-hub, mwparserfromhell |
+| `.[clean]` | 3 | datasketch, ftfy, fasttext |
+| `.[train]` | 5 | torch, transformers, trl, peft, deepspeed (Linux + CUDA) |
+| `.[rag]` | 9 | qdrant-client, sentence-transformers |
+| `.[serve]` | 10 | vllm, fastapi, uvicorn |
+
+---
+
+## Building the corpus
+
+```bash
+# What is registered, and why each source is on or off
+qm crawl list --all
+qm ingest list
+
+# Bulk sources: Wikipedia dumps and HF datasets. No crawling, open licences.
+qm ingest run wiki_kaa
+qm ingest all --bulk-only
+
+# Crawl the live Karakalpak web, politely and resumably
+qm crawl all --max-pages 600            # concurrent across hosts
+qm crawl status                         # resume-safe; Ctrl-C and re-run
+qm crawl run gov_sud_latin -n 100       # one source
+
+# Turn crawled HTML into interim documents (re-runnable, never re-fetches)
+qm ingest run gov_sud_latin
+```
+
+Every source must be declared in [`configs/crawl/sources.yaml`](configs/crawl/sources.yaml)
+with its licence, legal basis and rate limit before anything fetches it — so those decisions
+are reviewed in a diff rather than improvised inside a scraper. `respect_robots` is on for
+every source and a unit test enforces it.
 
 ---
 
@@ -132,7 +178,7 @@ pip install -e ".[serve]"   # Phase 10
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1 | Project architecture & shared foundation | ✅ done |
-| 2 | Data collection (crawlers, legality, source audit) | 🔨 audit done, crawlers next |
+| 2 | Data collection (source audit, crawlers, ingesters) | 🔨 Tier 1 ingested, Tier 2 crawling |
 | 3 | Cleaning & deduplication pipeline | |
 | 4 | Dataset schemas (JSONL) + tokenizer analysis | |
 | 5 | Continued pretraining (Qwen3-8B) | |
