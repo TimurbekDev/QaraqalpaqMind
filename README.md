@@ -6,16 +6,18 @@ Base model: **Qwen3-8B** → Continued Pretraining → SFT → DPO → RAG → v
 
 > **Status:** Phase 1 complete, Phase 2 in progress. See [docs/ROADMAP.md](docs/ROADMAP.md).
 >
-> **Corpus in hand: 357,347 documents / 75.8 M characters / ~24.4 M estimated tokens**,
-> measured by running the pipeline rather than estimated ([docs/SOURCES.md](docs/SOURCES.md)).
-> An opening ~250 MB projection did not survive contact — MADLAD-400 ships no Karakalpak
+> **Corpus: 286,434 unique documents / 66.0 M characters / ~21.3 M unique tokens**
+> (`pretrain_v1`), measured end to end by running the pipeline — crawl, clean, dedup —
+> not estimated at any stage. See [docs/SOURCES.md](docs/SOURCES.md).
+>
+> An opening ~250 MB projection did not survive contact: MADLAD-400 ships no Karakalpak
 > at all, GlotCC-V1 has 172 documents rather than 30 MB, and the live Karakalpak web is
-> ~11 MB rather than 78 MB.
+> ~11 MB rather than 78 MB. Deduplication then removed a further 17.2%.
 >
 > That makes this an **adaptation** project, not a from-scratch one. Qwen3-8B saw ~36 T
-> tokens; ~20–25 M unique Karakalpak tokens after dedup is enough to teach a model that
-> already knows Kazakh, Uzbek and Turkish about this Kipchak relative — and not enough for
-> full-parameter fine-tuning, which is why Phase 5 defaults to LoRA.
+> tokens; 21.3 M unique Karakalpak tokens is enough to teach a model that already knows
+> Kazakh, Uzbek and Turkish about this Kipchak relative — and not enough for
+> full-parameter fine-tuning, which is why Phase 5 uses LoRA.
 
 ---
 

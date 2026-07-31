@@ -6,7 +6,7 @@ One phase at a time. A phase is done when its deliverables exist, run, and are c
 |---|---|---|---|
 | 1 | **Architecture** | Folder tree, `common/` (paths, logging, config, io), `pyproject.toml`, `qm` CLI, docs | `qm doctor` runs; unit tests green |
 | 2 | **Data collection** | Source audit (legality, licence, size, update cadence), `crawlers/core` + ≥6 source modules, resumable state | ≥50 MB raw Karakalpak text landed in `data/raw/` |
-| 3 | **Cleaning** | HTML/PDF extraction, unicode/ftfy normalisation, kaa language-ID model, quality scorer, exact + MinHash dedup | `data/processed/` with a measured keep-rate report |
+| 3 | **Cleaning** | HTML/PDF extraction, unicode/ftfy normalisation, kaa language-ID model, quality scorer, exact + MinHash dedup | ✅ `pretrain_v1`: 286,434 docs, ~21.3M unique tokens |
 | 4 | **Dataset formats** | JSONL schemas for all 11 task types + validators; tokenizer fertility study on Qwen3 | `pretrain_v1` manifest with token count |
 | 5 | **Continued pretraining** | Qwen3-8B CPT configs (LoRA + full), DeepSpeed/FSDP, launch scripts | Loss curve down; kaa perplexity beats base model |
 | 6 | **SFT** | Instruction datasets (8 categories), TRL `SFTTrainer` scripts, chat template | Model answers in Karakalpak, follows format |
@@ -17,6 +17,30 @@ One phase at a time. A phase is done when its deliverables exist, run, and are c
 | 11 | **Web UI** | Next.js chat: streaming, markdown, code highlight, upload, history, dark mode, mobile | Usable end-to-end from a browser |
 | 12 | **Automation** | Scheduled crawl → clean → train → eval → deploy, single-command scripts | Nightly refresh runs unattended |
 | 13 | **Documentation** | Install, train, infer, deploy, troubleshoot, scale | A stranger can reproduce the model from the docs |
+
+## Corpus: final numbers
+
+Phase 3 is complete, so the corpus size is now measured end to end rather than
+estimated at any stage.
+
+| Stage | Documents | Characters | ~Tokens |
+|---|---:|---:|---:|
+| Ingested (`data/interim/`) | 358,077 | 77.6 M | 25.2 M |
+| Cleaned (`data/processed/`) | 345,872 | 77.1 M | 24.9 M |
+| **Deduplicated (`pretrain_v1`)** | **286,434** | **66.0 M** | **21.3 M** |
+
+Deduplication removed 56,331 exact and 3,107 near duplicates — 17.2% of the
+cleaned corpus. Where it came from is informative:
+
+| Source | Removed | Why |
+|---|---:|---|
+| `hf_dilmash_parallel` | 20.7% | the same Karakalpak sentence appears in the kaa_eng, kaa_rus **and** kaa_uzb splits |
+| `gov_sud_latin` | 48.9% | archive and pagination pages re-rendering the same rulings |
+| `blog_shagalalab` | 45.7% | Blogger date archives re-rendering posts |
+| `gov_qrdsm` | 37.3% | multilingual site serving overlapping content |
+| `glotcc_kaa` | 27.3% | scraped `kaa.wikipedia`, overlapping `wiki_kaa` |
+
+**~21.3 M unique tokens is the number Phase 5 must be planned against.**
 
 ## Current position
 

@@ -1,0 +1,14 @@
+{
+  "source_id": "pretrain_v1",
+  "created_at": "2026-07-31T17:16:44.547866Z",
+  "license": "mixed - see per-source manifests",
+  "source_url": "local://data/processed",
+  "path": "D:/Dev/open-source/QaraqalpaqMind/data/datasets/pretrain/pretrain_v1.jsonl.zst",
+  "sha256": "33a1d9881098f611241db27e898a8fc5e93f1e3dc0ee5f7969ee1747a02c6b34",
+  "size_bytes": 37185024,
+  "documents": 286434,
+  "characters": 66020914,
+  "words": 0,
+  "estimated_tokens": 21297069,
+  "scripts": {}
+}

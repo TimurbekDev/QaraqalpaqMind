@@ -98,6 +98,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("clean group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .dedup.cli import app as dedup_app
+
+        app.add_typer(dedup_app, name="dedup")
+    except ImportError as exc:
+        logger.debug("dedup group unavailable", extra={"error": str(exc)})
+
     # Registered as each phase lands:
     # from .training.cli import app as train_app;  app.add_typer(train_app, name="train")
 
