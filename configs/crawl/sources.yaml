@@ -245,7 +245,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: weekly
-    est_size_mb: 1.0
+    est_size_mb: 1.35
     quality: 5
     scripts: [latin]
     allowed_paths: ["/qql/"]
@@ -265,7 +265,7 @@ sources:
     legal: government_work
     license: unknown
     update_frequency: weekly
-    est_size_mb: 1.7
+    est_size_mb: 1.89
     quality: 5
     scripts: [cyrillic]
     allowed_paths: ["/qqc/"]
@@ -289,15 +289,17 @@ sources:
     update_frequency: weekly
     est_size_mb: 1.4
     quality: 4
-    scripts: [latin]
+    scripts: [latin, cyrillic]
     allowed_paths: ["/qq/"]
     denied_paths: ["/ru/", "/uz/", "/en/", "/wp-admin/"]
     delay_seconds: 3.0
     priority: 2
     verified_on: 2026-07-31
     notes: >-
-      VERIFIED kaa=1.00, latin_2016. wp-sitemap: 300 posts + 169 pages.
-      Academic and administrative prose, plus scattered lecture material.
+      CRAWLED: 600 pages, 5 failures, 100% Karakalpak; 592 documents,
+      1.05M chars. Academic and administrative prose, plus scattered lecture
+      material. SCRIPT MIX MEASURED: 77% Latin 2016, 19% Cyrillic - recorded
+      as Latin-only in the original audit.
 
   - id: gov_qrdsm
     name: Karakalpakstan Ministry of Health
@@ -309,14 +311,20 @@ sources:
     update_frequency: weekly
     est_size_mb: 1.5
     quality: 4
-    scripts: [latin]
+    scripts: [latin, cyrillic]
     denied_paths: ["/ru/", "/uz/", "/en/", "/wp-admin/"]
     delay_seconds: 3.0
     priority: 3
     verified_on: 2026-07-31
     notes: >-
-      VERIFIED kaa=0.88, latin_2016. wp-sitemap: 352 posts. One of the few
-      sources of Karakalpak medical and public-health vocabulary.
+      CRAWLED: 600 pages, 0 failures, 100% Karakalpak; 597 documents,
+      1.03M chars. One of the few sources of Karakalpak medical and
+      public-health vocabulary.
+
+      SCRIPT MIX MEASURED: 51% Cyrillic, 48% Latin 2016. The original audit
+      recorded this as Latin-only, from the landing page alone. The site
+      publishes across both scripts, which is why the orthography census is
+      run over extracted text rather than trusted from a single probe.
 
   - id: lit_kitapxana
     name: kitapxana.com - Karakalpak literature e-library
