@@ -141,8 +141,18 @@ module = [
     "zstandard.*",
     "datasets.*",
     "mwparserfromhell.*",
+    # Installed only via the `train` extra, which needs CUDA. Type checking
+    # must still pass on a machine without it.
+    "torch.*",
+    "peft.*",
+    "transformers.*",
+    "bitsandbytes.*",
+    "deepspeed.*",
+    "trl.*",
+    "accelerate.*",
 ]
 ignore_missing_imports = true
+disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

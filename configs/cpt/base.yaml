@@ -1,0 +1,108 @@
+# Continued pretraining - shared defaults.
+#
+# Do not run this file directly. The hardware-specific configs inherit from it
+# and set what actually differs:
+#
+#   qwen3_8b_qlora_24gb.yaml   one 24GB consumer card   (RTX 3090/4090)
+#   qwen3_8b_lora_a100.yaml    one 40-80GB data-centre card
+#   qwen3_8b_full_multigpu.yaml  8x80GB, full fine-tuning
+#
+# Every number is justified in docs/TRAINING.md. They are tuned for THIS
+# corpus - 28.7M Karakalpak tokens against an 8B model - and do not transfer
+# to a larger one unchanged.
+
+method: qlora
+
+model:
+  name: Qwen/Qwen3-8B
+  # Pin this before any run whose result you intend to keep. A moving branch
+  # means the run cannot be reproduced.
+  revision: null
+  attn_implementation: sdpa   # flash_attention_2 on Linux+CUDA, if installed
+  torch_dtype: bfloat16
+  use_cache: false            # required by gradient checkpointing
+
+quantization:
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_compute_dtype: bfloat16
+
+lora:
+  # r=64 is generous by instruction-tuning standards, deliberately. Continued
+  # pretraining has to move the model's representation of a whole language,
+  # which is a bigger change than teaching a response style, and too low a rank
+  # simply cannot express it.
+  r: 64
+  alpha: 128
+  dropout: 0.05
+  bias: none
+  # All linear layers. Restricting to q_proj/v_proj is an instruction-tuning
+  # convention; for language adaptation the MLP matrices hold most of the
+  # lexical knowledge that needs to change.
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  modules_to_save: []
+
+data:
+  dataset: pretrain_v1
+  # 2048 Karakalpak tokens is ~4,700 characters. Measured: Karakalpak runs
+  # 2.30 chars/token against English's 4.27, so this window holds about as much
+  # text as 1,100 English tokens would. See docs/TOKENIZER.md.
+  sequence_length: 2048
+  packing: true
+  add_eos_between_documents: true
+  validation_split: 0.01
+  shuffle_seed: 20260731
+  num_workers: 2
+  # Multilingual replay is off by default and worth turning on if evaluation
+  # shows the model losing English or Russian. See docs/TRAINING.md.
+  replay_dataset: null
+  replay_ratio: 0.0
+
+optim:
+  # 1e-4 suits LoRA, which updates only a low-rank projection. It would be
+  # catastrophic for full fine-tuning; the config validator refuses that
+  # combination rather than letting it run.
+  learning_rate: 1.0e-4
+  optimizer: adamw_torch_fused
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95        # LLM pretraining convention, not the 0.999 default
+  max_grad_norm: 1.0
+  lr_scheduler: cosine
+  warmup_ratio: 0.03
+  min_lr_ratio: 0.1       # never decay to exactly zero
+
+runtime:
+  # Two passes over 28.7M tokens. More invites memorisation on a corpus this
+  # small; fewer leaves the adapter undertrained. Watch validation loss and
+  # stop when it turns.
+  num_epochs: 2.0
+  max_steps: null
+  per_device_batch_size: 1
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true
+  bf16: true
+  fp16: false
+  tf32: true
+  seed: 20260731
+
+logging:
+  output_dir: models/cpt
+  run_name: qwen3-8b-kaa-cpt
+  logging_steps: 10
+  save_steps: 200
+  eval_steps: 200
+  save_total_limit: 3
+  report_to: [wandb]
+  wandb_project: qaraqalpaqmind
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false

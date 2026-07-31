@@ -40,8 +40,24 @@ class Manifest(BaseModel):
     documents: int
     characters: int
     words: int
-    estimated_tokens: int
+    estimated_tokens: int = Field(
+        description="Cheap chars/3.1 approximation, available without a tokenizer."
+    )
+    measured_tokens: int | None = Field(
+        default=None,
+        description=(
+            "Exact count from the real tokenizer, written by `qm tokenizer count`. "
+            "The estimate understated this corpus by 35%, so anything sizing a "
+            "training run must prefer this when it is present."
+        ),
+    )
+    tokenizer: str | None = Field(default=None, description="Model whose tokenizer was used.")
     scripts: dict[str, int] = Field(default_factory=dict)
+
+    @property
+    def tokens(self) -> int:
+        """Best available token count: measured if known, estimated otherwise."""
+        return self.measured_tokens if self.measured_tokens is not None else self.estimated_tokens
 
     @classmethod
     def build(

@@ -1,0 +1,35 @@
+{
+  "_comment": [
+    "DeepSpeed ZeRO-2: shards gradients and optimizer states, but keeps a full",
+    "copy of the parameters on every rank. Faster than ZeRO-3 because it needs",
+    "no parameter gathering, and sufficient whenever the model fits in memory -",
+    "which for LoRA it does, since only the adapters carry optimizer state.",
+    "",
+    "Use this for multi-GPU LoRA runs; use ZeRO-3 for full-parameter training,",
+    "where the parameters themselves must be sharded.",
+    "",
+    "'auto' values come from TrainingArguments so batch size and precision are",
+    "configured in one place, the YAML, and cannot drift out of agreement."
+  ],
+
+  "bf16": { "enabled": "auto" },
+  "fp16": { "enabled": "auto" },
+
+  "zero_optimization": {
+    "stage": 2,
+    "allgather_partitions": true,
+    "allgather_bucket_size": 5e8,
+    "overlap_comm": true,
+    "reduce_scatter": true,
+    "reduce_bucket_size": 5e8,
+    "contiguous_gradients": true
+  },
+
+  "gradient_accumulation_steps": "auto",
+  "gradient_clipping": "auto",
+  "train_batch_size": "auto",
+  "train_micro_batch_size_per_gpu": "auto",
+
+  "steps_per_print": 50,
+  "wall_clock_breakdown": false
+}

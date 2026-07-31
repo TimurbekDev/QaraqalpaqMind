@@ -1,0 +1,37 @@
+# Qwen3-8B continued pretraining on ONE 24GB card (RTX 3090 / 4090 / A10).
+#
+# This is the default configuration for the project. It is the setup most
+# people can actually obtain, and everything else scales up from it more
+# easily than down.
+#
+# Memory budget, approximate:
+#   4-bit base weights          ~5.0 GB
+#   LoRA adapters (r=64) + grads ~0.7 GB
+#   AdamW states for adapters    ~0.6 GB
+#   activations w/ checkpointing ~4-6 GB at seq 2048, batch 1
+#   ---------------------------------------------------
+#   total                       ~11-13 GB, leaving headroom for fragmentation
+#
+# Expected shape on 28.7M tokens:
+#   tokens/step = 1 x 16 x 2048 = 32,768
+#   steps/epoch = 28.7M / 32,768 = ~875
+#   2 epochs    = ~1,750 optimiser steps
+#
+# Check before launching, and never guess:
+#   qm train plan --config configs/cpt/qwen3_8b_qlora_24gb.yaml
+
+_base_: base.yaml
+
+method: qlora
+
+runtime:
+  per_device_batch_size: 1
+  # 16 accumulation steps give a 32,768-token optimiser step. Smaller batches
+  # make the loss curve too noisy to read on a corpus this small.
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true
+  bf16: true
+
+logging:
+  run_name: qwen3-8b-kaa-cpt-qlora24
+  output_dir: models/cpt/qlora_24gb

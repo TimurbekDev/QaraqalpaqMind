@@ -10,5 +10,7 @@
   "characters": 66020914,
   "words": 0,
   "estimated_tokens": 21297069,
+  "measured_tokens": 28683631,
+  "tokenizer": "Qwen/Qwen3-8B",
   "scripts": {}
 }

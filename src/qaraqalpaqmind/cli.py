@@ -133,8 +133,12 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("schema group unavailable", extra={"error": str(exc)})
 
-    # Registered as each phase lands:
-    # from .training.cli import app as train_app;  app.add_typer(train_app, name="train")
+    try:
+        from .training.cli import app as train_app
+
+        app.add_typer(train_app, name="train")
+    except ImportError as exc:
+        logger.debug("train group unavailable", extra={"error": str(exc)})
 
 
 _register_groups()

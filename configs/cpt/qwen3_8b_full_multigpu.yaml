@@ -1,0 +1,53 @@
+# Qwen3-8B FULL-parameter continued pretraining, 8 x 80GB with DeepSpeed ZeRO-3.
+#
+# ---------------------------------------------------------------------------
+# READ THIS BEFORE USING IT. This configuration is provided for completeness
+# and is NOT recommended for this project.
+#
+# The corpus is 28.7M tokens. Full fine-tuning updates 8 billion parameters
+# from it - roughly 280 parameters per training token. That is the classic
+# setup for catastrophic forgetting: the model will fit Karakalpak and lose
+# the Kazakh, Uzbek, Turkish and Russian knowledge that makes cross-lingual
+# transfer work at all, which is the entire reason a multilingual base was
+# chosen. LoRA constrains the update to a low-rank subspace and is the right
+# tool here.
+#
+# Use this only if you have substantially more data than we do, or you are
+# deliberately measuring the forgetting to demonstrate it.
+# ---------------------------------------------------------------------------
+#
+# Note the learning rate. The config validator rejects full fine-tuning above
+# 5e-5, because the LoRA default of 1e-4 would wreck the base model.
+#
+# Launch:
+#   accelerate launch --config_file configs/cpt/accelerate_zero3.yaml \
+#     -m qaraqalpaqmind.training.cpt.train \
+#     --config configs/cpt/qwen3_8b_full_multigpu.yaml
+
+_base_: base.yaml
+
+method: full
+
+model:
+  attn_implementation: flash_attention_2
+
+optim:
+  # 1e-5, not 1e-4. Two orders of magnitude matters here.
+  learning_rate: 1.0e-5
+  # Longer warmup: full fine-tuning is far more sensitive to early large steps.
+  warmup_ratio: 0.05
+
+runtime:
+  # One epoch only. A second pass over 28.7M tokens with every parameter
+  # unfrozen is memorisation, not learning.
+  num_epochs: 1.0
+  per_device_batch_size: 2
+  gradient_accumulation_steps: 4     # x8 GPUs = 65,536 tokens/step
+  gradient_checkpointing: true
+  bf16: true
+  deepspeed: configs/cpt/deepspeed_zero3.json
+
+logging:
+  run_name: qwen3-8b-kaa-cpt-full
+  output_dir: models/cpt/full_multigpu
+  save_steps: 100

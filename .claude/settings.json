@@ -14,7 +14,12 @@
       "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_schemas.py -q 2>&1)",
       "PowerShell(.\\\\.venv\\\\Scripts\\\\ruff.exe check .; .\\\\.venv\\\\Scripts\\\\mypy.exe src/qaraqalpaqmind scripts 2>&1 | Select-Object -Last 4; .\\\\.venv\\\\Scripts\\\\python.exe -m pytest -q 2>&1 | Select-Object -Last 3; Write-Output \"=== CLI ===\"; $env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe schema list 2>&1 | Select-Object -Last 20)",
       "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe schema chat grammar 2>&1 | Select-Object -Last 12)",
-      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg10.txt\" 2>&1)"
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg10.txt\" 2>&1)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\mypy.exe src/qaraqalpaqmind scripts 2>&1 | Select-Object -Last 4; .\\\\.venv\\\\Scripts\\\\ruff.exe check .; Write-Output \"=== PLAN ===\"; $env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe train plan 2>&1 | Select-Object -Last 34)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\ruff.exe check .; .\\\\.venv\\\\Scripts\\\\mypy.exe src/qaraqalpaqmind 2>&1 | Select-Object -Last 3; $env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe tokenizer count 2>&1 | Select-Object -Last 4)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe train plan 2>&1 | Select-Object -Skip 4 -First 22; Write-Output \"=== CONFIGS ===\"; .\\\\.venv\\\\Scripts\\\\qm.exe train configs)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_training_config.py -q 2>&1)",
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg11.txt\" 2>&1)"
     ]
   }
 }

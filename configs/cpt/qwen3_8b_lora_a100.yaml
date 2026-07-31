@@ -1,0 +1,32 @@
+# Qwen3-8B continued pretraining on ONE 40-80GB card (A100 / H100 / A6000).
+#
+# The base model is held in bf16 rather than 4-bit. That removes quantisation
+# error from the forward pass and trains noticeably faster, at the cost of
+# ~16GB for the weights instead of ~5GB.
+#
+# Expected shape on 28.7M tokens:
+#   tokens/step = 4 x 8 x 2048 = 65,536
+#   steps/epoch = ~438,  2 epochs = ~875 steps
+#
+#   qm train plan --config configs/cpt/qwen3_8b_lora_a100.yaml
+
+_base_: base.yaml
+
+method: lora
+
+model:
+  # Available on Linux with CUDA once `.[train]` is installed. Roughly 20-30%
+  # faster than sdpa at this sequence length, and it lowers activation memory.
+  attn_implementation: flash_attention_2
+
+runtime:
+  per_device_batch_size: 4
+  gradient_accumulation_steps: 8
+  # Still on. The memory it frees buys a larger batch, which is worth more than
+  # the ~25% throughput it costs at this scale.
+  gradient_checkpointing: true
+  bf16: true
+
+logging:
+  run_name: qwen3-8b-kaa-cpt-lora-a100
+  output_dir: models/cpt/lora_a100

@@ -18,7 +18,7 @@ from ..common.io import read_jsonl
 from ..common.logging import get_logger
 from ..common.paths import INTERIM_DIR
 from ..dedup.pipeline import output_path
-from ..ingest.manifest import read_manifest
+from ..ingest.manifest import read_manifest, write_manifest
 from .fertility import (
     QWEN3_MODEL,
     FertilityReport,
@@ -186,14 +186,25 @@ def count(
         f"({report.fertility:.2f} tok/word, {report.chars_per_token:.2f} chars/tok)"
     )
 
-    if limit is None:
-        try:
-            manifest = read_manifest(dataset)
-        except (OSError, ValueError):
-            return
-        estimated = manifest.estimated_tokens
-        drift = report.tokens / estimated if estimated else 0.0
-        console.print(
-            f"[bright_black]The chars/3.1 estimate said {estimated:,}; "
-            f"the real count is {drift:.2f}x that.[/]"
-        )
+    if limit is not None:
+        console.print("[bright_black]Partial count; manifest not updated.[/]")
+        return
+
+    try:
+        manifest = read_manifest(dataset)
+    except (OSError, ValueError):
+        return
+
+    estimated = manifest.estimated_tokens
+    drift = report.tokens / estimated if estimated else 0.0
+    console.print(
+        f"[bright_black]The chars/3.1 estimate said {estimated:,}; "
+        f"the real count is {drift:.2f}x that.[/]"
+    )
+
+    # Persist it. Anything sizing a training run should use the measured number,
+    # and leaving it only in a terminal scrollback guarantees it will not.
+    write_manifest(
+        manifest.model_copy(update={"measured_tokens": report.tokens, "tokenizer": model})
+    )
+    console.print(f"[green]Manifest updated[/] with the measured count for '{dataset}'.")
