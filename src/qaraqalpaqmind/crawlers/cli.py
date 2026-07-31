@@ -181,6 +181,93 @@ def run(
         console.print(f"[bright_black]{error}[/]")
 
 
+@app.command("all")
+def run_all(
+    max_pages: int = typer.Option(500, "--max-pages", "-n", min=1, help="Per source."),
+    max_depth: int = typer.Option(4, "--max-depth", min=0),
+    skip: list[str] = typer.Option([], "--skip", help="Source ids to leave out."),
+    only: list[str] = typer.Option([], "--only", help="Restrict to these source ids."),
+) -> None:
+    """Crawl every enabled source, concurrently across hosts.
+
+    All sources share ONE `Fetcher`, which matters: the rate limiter is keyed by
+    host, so two sources on the same host (sud.uz has a Latin and a Cyrillic
+    locale) are still served one request at a time. Give each source its own
+    fetcher and that guarantee silently disappears.
+    """
+    registry = load_registry()
+    specs = [s for s in registry.enabled_sources() if s.access is AccessMethod.CRAWL]
+    if only:
+        specs = [s for s in specs if s.id in set(only)]
+    if skip:
+        specs = [s for s in specs if s.id not in set(skip)]
+
+    if not specs:
+        console.print("[yellow]No matching enabled crawl sources.[/]")
+        return
+
+    console.print(
+        f"Crawling [cyan]{len(specs)}[/] sources, up to {max_pages} pages each, depth {max_depth}"
+    )
+    for spec in specs:
+        console.print(f"  [bright_black]{spec.id:<20} {spec.url}  {spec.delay_seconds}s[/]")
+
+    async def go() -> list[CrawlStats]:
+        async with Fetcher(user_agent=registry.user_agent, default_delay=2.0) as fetcher:
+            with _state() as state:
+
+                async def one(spec: SourceSpec) -> CrawlStats:
+                    crawler = Crawler(
+                        spec, fetcher, state, RawStore(spec.id), max_depth=max_depth
+                    )
+                    try:
+                        await crawler.seed()
+                        return await crawler.run(max_pages=max_pages)
+                    except Exception as exc:
+                        # One dead host must not abort the batch.
+                        logger.exception("Crawl failed", extra={"source": spec.id})
+                        stats = CrawlStats(source_id=spec.id)
+                        stats.errors.append(f"{type(exc).__name__}: {exc}")
+                        return stats
+
+                return await asyncio.gather(*(one(spec) for spec in specs))
+
+    results = asyncio.run(go())
+    _summarise(results)
+
+
+def _summarise(results: list[CrawlStats]) -> None:
+    table = Table(title="Crawl results")
+    for column in ("source", "fetched", "failed", "dupes", "new urls", "kaa %", "MB"):
+        table.add_column(column, justify="right")
+
+    for stats in sorted(results, key=lambda s: -s.fetched):
+        ratio = f"{stats.kaa_ratio:.0%}" if stats.scored_pages else "-"
+        style = "red" if stats.scored_pages and stats.kaa_ratio < 0.5 else "green"
+        table.add_row(
+            stats.source_id,
+            str(stats.fetched),
+            str(stats.failed),
+            str(stats.duplicates),
+            str(stats.discovered),
+            f"[{style}]{ratio}[/]",
+            f"{stats.bytes_stored / 1_048_576:.1f}",
+        )
+    console.print(table)
+
+    total_mb = sum(s.bytes_stored for s in results) / 1_048_576
+    console.print(f"Fetched [green]{sum(s.fetched for s in results)}[/] pages, {total_mb:.1f} MB raw")
+
+    for stats in results:
+        if stats.scored_pages and stats.kaa_ratio < 0.5:
+            console.print(
+                f"[yellow]{stats.source_id}: only {stats.kaa_ratio:.0%} Karakalpak - "
+                "check allowed_paths, the crawl may be in the wrong locale.[/]"
+            )
+        for error in stats.errors[:3]:
+            console.print(f"[bright_black]{stats.source_id}: {error}[/]")
+
+
 @app.command()
 def retry(
     source: str,

@@ -32,6 +32,7 @@ SITEMAP_INDEX = """<?xml version="1.0"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap><loc>https://example.uz/sm-posts.xml</loc></sitemap>
   <sitemap><loc>https://example.uz/sm-broken.xml</loc></sitemap>
+  <sitemap><loc>https://example.uz/ru/sm-posts.xml</loc></sitemap>
 </sitemapindex>"""
 
 SITEMAP_POSTS = """<?xml version="1.0"?>
@@ -150,6 +151,21 @@ async def test_broken_sitemap_child_does_not_abort_the_crawl(tmp_path: Path) -> 
         await fetcher.aclose()
         state.close()
     assert "/sm-broken.xml" in log
+
+
+async def test_out_of_locale_child_sitemaps_are_never_fetched(tmp_path: Path) -> None:
+    # sud.uz publishes /ru/ and /uz/ child sitemaps we have no use for; fetching
+    # them would cost their server twenty needless requests on every run.
+    log: list[str] = []
+    crawler, state, _, fetcher = _build(tmp_path, log)
+    try:
+        await crawler.seed()
+    finally:
+        await fetcher.aclose()
+        state.close()
+
+    assert "/sm-posts.xml" in log
+    assert "/ru/sm-posts.xml" not in log
 
 
 async def test_full_crawl_stores_pages_and_follows_links(tmp_path: Path) -> None:

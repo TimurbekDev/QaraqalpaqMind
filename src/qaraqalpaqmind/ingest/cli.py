@@ -23,6 +23,8 @@ console = Console()
 app = typer.Typer(help="Ingest bulk datasets and dumps.", no_args_is_help=True)
 
 _BULK_ACCESS = {AccessMethod.DUMP, AccessMethod.HF}
+# Every access method that can produce interim documents.
+_INGESTABLE = _BULK_ACCESS | {AccessMethod.CRAWL}
 
 
 def _resolve(registry: SourceRegistry, source_id: str) -> SourceSpec:
@@ -44,25 +46,37 @@ def build_ingester(spec: SourceSpec) -> Ingester:
         from .huggingface import HuggingFaceIngester
 
         return HuggingFaceIngester(spec)
+    if spec.access is AccessMethod.CRAWL:
+        # Extraction from already-crawled bytes; never touches the network.
+        from .crawled import CrawledIngester
+
+        return CrawledIngester(spec)
     raise typer.BadParameter(
-        f"'{spec.id}' has access='{spec.access.value}'. "
-        "Only 'dump' and 'hf' sources are ingested; use `qm crawl` for the rest."
+        f"'{spec.id}' has access='{spec.access.value}', which cannot be ingested. "
+        "Manual sources must be placed in data/raw/ by hand."
     )
 
 
 @app.command("list")
-def list_sources() -> None:
-    """Show bulk sources and whether they have been ingested."""
+def list_sources(
+    bulk_only: bool = typer.Option(False, "--bulk-only", help="Exclude crawled sources."),
+) -> None:
+    """Show ingestable sources and whether they have been ingested."""
     registry = load_registry()
-    specs = [s for s in registry.enabled_sources() if s.access in _BULK_ACCESS]
+    wanted = _BULK_ACCESS if bulk_only else _INGESTABLE
+    specs = [s for s in registry.enabled_sources() if s.access in wanted]
 
-    table = Table(title=f"Bulk sources ({len(specs)})")
+    table = Table(title=f"Ingestable sources ({len(specs)})")
     for column in ("id", "access", "licence", "est MB", "ingested", "docs", "~tokens"):
         table.add_column(column, overflow="fold")
 
+    total_documents = total_tokens = 0
     for spec in specs:
         done = manifest_path(spec.id).exists()
         manifest = read_manifest(spec.id) if done else None
+        if manifest:
+            total_documents += manifest.documents
+            total_tokens += manifest.estimated_tokens
         table.add_row(
             spec.id,
             spec.access.value,
@@ -73,6 +87,10 @@ def list_sources() -> None:
             f"{manifest.estimated_tokens:,}" if manifest else "-",
         )
     console.print(table)
+    console.print(
+        f"Corpus in hand: [green]{total_documents:,}[/] documents, "
+        f"[green]~{total_tokens:,}[/] estimated tokens"
+    )
 
 
 @app.command()
@@ -119,10 +137,12 @@ def run(
 def run_all(
     limit: int | None = typer.Option(None, "--limit", "-n", min=1),
     skip_existing: bool = typer.Option(True, "--skip-existing/--redo"),
+    bulk_only: bool = typer.Option(False, "--bulk-only", help="Exclude crawled sources."),
 ) -> None:
-    """Ingest every enabled bulk source, in registry priority order."""
+    """Ingest every enabled source, in registry priority order."""
     registry = load_registry()
-    specs = [s for s in registry.enabled_sources() if s.access in _BULK_ACCESS]
+    wanted = _BULK_ACCESS if bulk_only else _INGESTABLE
+    specs = [s for s in registry.enabled_sources() if s.access in wanted]
 
     results: list[Manifest] = []
     for spec in specs:

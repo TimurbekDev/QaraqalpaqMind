@@ -16,6 +16,7 @@ add complexity. Throughput comes from crawling several *sources* concurrently.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from ...common.logging import get_logger
 from ...preprocessing.script import analyse
@@ -131,8 +132,23 @@ class Crawler:
 
         children: list[str] = []
         for child in locations[:_SITEMAP_CHILD_LIMIT]:
+            if self._is_denied_sitemap(child):
+                logger.debug("Skipping out-of-locale sitemap", extra={"url": child})
+                continue
             children.extend(await self._expand_sitemap(child, depth + 1))
         return children
+
+    def _is_denied_sitemap(self, url: str) -> bool:
+        """Skip child sitemaps that clearly belong to another locale.
+
+        Only `denied_paths` is applied, never `allowed_paths`: sitemap files sit
+        at the site root (`/wp-sitemap-posts-post-1.xml`), so requiring them to
+        start with `/qql/` would reject every one of them. But sud.uz publishes
+        `/ru/wp-sitemap-...` and `/uz/wp-sitemap-...` children we have no use
+        for, and fetching them costs their server twenty requests per run.
+        """
+        path = urlsplit(url).path or "/"
+        return any(path.startswith(denied) for denied in self._spec.denied_paths)
 
     async def run(self, max_pages: int | None = None) -> CrawlStats:
         """Drain the frontier until it is empty or `max_pages` have been fetched."""
