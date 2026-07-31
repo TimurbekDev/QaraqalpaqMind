@@ -1,0 +1,62 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Secrets / local env ---
+.env
+.env.local
+*.pem
+*.key
+secrets/
+
+# --- Data (tracked via manifests + DVC/HF Hub, never via git) ---
+data/raw/**
+data/interim/**
+data/processed/**
+data/datasets/**
+!data/**/.gitkeep
+!data/**/README.md
+!data/manifests/**
+
+# --- Model weights ---
+models/**
+!models/**/.gitkeep
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.ckpt
+
+# --- Logs / runs ---
+logs/**
+!logs/**/.gitkeep
+wandb/
+runs/
+outputs/
+*.log
+
+# --- Node / Next.js ---
+node_modules/
+web/.next/
+web/out/
+web/.turbo/
+next-env.d.ts
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Docker / infra local state ---
+deployment/**/volumes/
+qdrant_storage/

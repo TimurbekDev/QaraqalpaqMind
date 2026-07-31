@@ -1,0 +1,22 @@
+# Normalise to LF in the repo; the training/serving side is always Linux.
+* text=auto eol=lf
+
+*.py    text eol=lf
+*.sh    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.toml  text eol=lf
+Dockerfile* text eol=lf
+
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+
+# Corpora and weights are binary and should never be diffed or merged.
+*.jsonl        -diff
+*.zst          binary
+*.gz           binary
+*.safetensors  binary
+*.gguf         binary
+*.bin          binary
