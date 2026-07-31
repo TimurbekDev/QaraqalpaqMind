@@ -140,6 +140,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("train group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .training.sft.cli import app as sft_app
+
+        app.add_typer(sft_app, name="sft")
+    except ImportError as exc:
+        logger.debug("sft group unavailable", extra={"error": str(exc)})
+
 
 _register_groups()
 

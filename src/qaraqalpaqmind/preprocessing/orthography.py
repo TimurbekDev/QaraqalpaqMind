@@ -100,6 +100,8 @@ CYRILLIC_HOMOGLYPHS: Final[dict[str, str]] = {
     "ӊ": "ң", "Ӊ": "Ң",  # U+04CA en-with-tail, typed for ң    (118x)
     "һ": "ҳ", "Һ": "Ҳ",  # U+04BB shha, typed for ҳ
     "і": "и", "І": "И",  # U+0456 Ukrainian/Kazakh i
+    "ӱ": "ү", "Ӱ": "Ү",  # U+04F1 u-with-diaeresis, typed for ү
+    "ӧ": "ө", "Ӧ": "Ө",  # U+04E7 o-with-diaeresis, typed for ө
 }
 
 _HOMOGLYPH_PATTERN: Final[re.Pattern[str]] = re.compile(

@@ -1,0 +1,8 @@
+{"task": "math", "problem": "Úshmúyeshliktiń tabanı 10 sm, biyikligi 6 sm. Onıń maydanın tabıń.", "solution": "Úshmúyeshlik maydanı formulası: S = (a × h) / 2.\nS = (10 × 6) / 2 = 60 / 2 = 30.", "answer": "30 sm²", "level": "mektep"}
+{"task": "math", "problem": "Tórtmúyeshliktiń uzınlıǵı 12 sm, keńligi 7 sm. Perimetri qansha?", "solution": "Perimetr formulası: P = 2 × (a + b).\nP = 2 × (12 + 7) = 2 × 19 = 38.", "answer": "38 sm", "level": "mektep"}
+{"task": "math", "problem": "x + 15 = 42 teńlemesin sheshiń.", "solution": "Eki tárepten de 15 ti alıp taslaymız:\nx = 42 − 15\nx = 27.", "answer": "x = 27", "level": "mektep"}
+{"task": "math", "problem": "3x − 7 = 20 teńlemesin sheshiń.", "solution": "Eki tárepke 7 qosamız: 3x = 27.\nEki tárepti 3 ke bólemiz: x = 9.", "answer": "x = 9", "level": "mektep"}
+{"task": "math", "problem": "Sheńberdiń radiusı 5 sm. Onıń maydanın tabıń (π ≈ 3,14).", "solution": "Sheńber maydanı: S = π × r².\nS = 3,14 × 5² = 3,14 × 25 = 78,5.", "answer": "78,5 sm²", "level": "mektep"}
+{"task": "math", "problem": "120 sannıń 35 procentin tabıń.", "solution": "Procentti tabıw: 120 × 35 / 100.\n= 4200 / 100 = 42.", "answer": "42", "level": "mektep"}
+{"task": "math", "problem": "2, 5, 10, 17, 26 qatarındaǵı keyingi san qaysı?", "solution": "Ayırmalardı tabamız: 5−2=3, 10−5=5, 17−10=7, 26−17=9.\nAyırmalar 3, 5, 7, 9 — hár safarı 2 ge artpaqta.\nKeyingi ayırma 11 boladı: 26 + 11 = 37.", "answer": "37", "level": "mektep"}
+{"task": "math", "problem": "Eki sannıń qosındısı 50, ayırması 12. Bul sanlardı tabıń.", "solution": "a + b = 50, a − b = 12.\nEki teńlemeni qosamız: 2a = 62, demek a = 31.\nb = 50 − 31 = 19.", "answer": "31 hám 19", "level": "mektep"}

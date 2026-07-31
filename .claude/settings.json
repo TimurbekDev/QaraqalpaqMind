@@ -19,7 +19,16 @@
       "PowerShell(.\\\\.venv\\\\Scripts\\\\ruff.exe check .; .\\\\.venv\\\\Scripts\\\\mypy.exe src/qaraqalpaqmind 2>&1 | Select-Object -Last 3; $env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe tokenizer count 2>&1 | Select-Object -Last 4)",
       "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe train plan 2>&1 | Select-Object -Skip 4 -First 22; Write-Output \"=== CONFIGS ===\"; .\\\\.venv\\\\Scripts\\\\qm.exe train configs)",
       "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_training_config.py -q 2>&1)",
-      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg11.txt\" 2>&1)"
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg11.txt\" 2>&1)",
+      "Bash(./.venv/Scripts/mypy.exe src/qaraqalpaqmind)",
+      "Bash(./.venv/Scripts/ruff.exe check *)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe sft seeds 2>&1 | Select-Object -Last 16)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe sft build 2>&1 | Select-Object -Last 30)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe sft inspect --task grammar -n 1 2>&1 | Select-Object -Last 12; .\\\\.venv\\\\Scripts\\\\qm.exe sft inspect --task translation -n 1 2>&1 | Select-Object -Last 8)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\ruff.exe check .; .\\\\.venv\\\\Scripts\\\\mypy.exe src/qaraqalpaqmind 2>&1 | Select-Object -Last 4; $env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe sft plan 2>&1 | Select-Object -Last 22)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; .\\\\.venv\\\\Scripts\\\\qm.exe sft build 2>&1 | Select-String -Pattern \"train |translation|grammar|summar\" | Select-Object -First 6; Write-Output \"=== VERIFY ORTHOGRAPHY ===\"; .\\\\.venv\\\\Scripts\\\\qm.exe sft inspect --task translation -n 2 2>&1 | Select-String -Pattern \"assistant\" -Context 0,2 | Select-Object -First 8)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_sft.py -q 2>&1)",
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg12.txt\" 2>&1)"
     ]
   }
 }

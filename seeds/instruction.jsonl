@@ -1,0 +1,12 @@
+{"task": "instruction", "instruction": "Qaraqalpaqstan Respublikasınıń paytaxtı qaysı qala?", "output": "Qaraqalpaqstan Respublikasınıń paytaxtı — Nókis qalası."}
+{"task": "instruction", "instruction": "Aral teńizi haqqında qısqasha maǵlıwmat ber.", "output": "Aral teńizi — Oraylıq Aziyada, Qaraqalpaqstan hám Qazaqstan aymaǵında jaylasqan kól. XX ásirdiń ortalarına shekem dúnyadaǵı eń iri kóllerdiń biri esaplanǵan. Suwlandırıw ushın Ámiwdárya hám Sırdárya suwlarınıń kóplep alınıwı sebepli onıń kólemi keskin azaydı."}
+{"task": "instruction", "instruction": "Tómendegi gápti kóplik túrge aylandır.", "input": "Bala mektepke baradı.", "output": "Balalar mektepke baradı."}
+{"task": "instruction", "instruction": "Tómendegi gápti ótken zamanǵa aylandır.", "input": "Men kitap oqıyman.", "output": "Men kitap oqıdım."}
+{"task": "instruction", "instruction": "Qaraqalpaq tilinde \"salawmatlıq\" sózi qanday mániske iye?", "output": "\"Salawmatlıq\" sózi den sawlıq, aman-esenlik degen mániske iye. Ol adamnıń fizikalıq hám ruwxıy jaqtan jaqsı halda bolıwın bildiredi."}
+{"task": "instruction", "instruction": "Ájiniyaz kim bolǵan?", "output": "Ájiniyaz Qosıbay ulı (ádebiy laqabı Ziywar) — XIX ásirdegi qaraqalpaq klassik ádebiyatınıń eń kórnekli wákilleriniń biri. Ol shayır, aǵartıwshı hám ustaz bolǵan."}
+{"task": "instruction", "instruction": "Bes sanlı qaraqalpaqsha sanaw sistemasın jaz.", "output": "Bir, eki, úsh, tórt, bes."}
+{"task": "instruction", "instruction": "Tómendegi tekstti resmiy stilge aylandır.", "input": "Ertes jıynalıs bar, keliń.", "output": "Erteńgi kúni jıynalıs ótkeriledi, qatnasıwıńızdı soraymız."}
+{"task": "instruction", "instruction": "Qaraqalpaqstannıń tábiyaty haqqında úsh gáp jaz.", "output": "Qaraqalpaqstan tiykarınan sho'l hám sho'lleskn aymaqlardan ibarat. Onıń aymaǵında Qızılqum hám Aralqum sho'lleri jaylasqan. Ámiwdárya boyındaǵı jerler diyxanshılıq ushın paydalanıladı."}
+{"task": "instruction", "instruction": "Qaraqalpaq tilinde xat baslawdıń resmiy usılın kórset.", "output": "Húrmetli [atı-familiyası]!\n\nSizge [mákeme atı] atınan múrájat etpekshimiz."}
+{"task": "instruction", "instruction": "\"Kitap\" sózine úsh sózlik dizbek dúz.", "output": "Qızıqlı kitap, eski kitap, mektep kitabı."}
+{"task": "instruction", "instruction": "Tómendegi sanlardı qaraqalpaqsha sózben jaz.", "input": "12, 25, 100", "output": "On eki, jigirma bes, júz."}

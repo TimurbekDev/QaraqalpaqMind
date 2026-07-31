@@ -1,0 +1,40 @@
+# How the supervised fine-tuning mixture is assembled.
+#
+#   qm sft seeds     what hand-authored data exists
+#   qm sft build     assemble into data/datasets/sft/
+#   qm sft inspect   check how records render as chat
+#
+# Proportions are NOT proportional to how much data each builder can produce.
+# dilmash can supply ~430k translation records and the seed sets supply 45;
+# concatenating them would train a translation engine that occasionally
+# answers questions. Translation is therefore capped at 30%.
+
+name: sft_v1
+target_size: 50000
+validation_split: 0.02
+seed: 20260731
+
+# Always on. FLORES+ sentences reaching the SFT set would invalidate the
+# Phase 8 translation benchmark exactly as they would in pretraining.
+check_contamination: true
+
+proportions:
+  translation: 0.30      # abundant real data, deliberately capped
+  grammar: 0.20          # generated from real orthography variation
+  summarization: 0.15    # Wikipedia lead sections
+  instruction: 0.12      # seed-backed; currently short
+  qa: 0.10               # seed-backed; currently short
+  conversation: 0.05     # seed-backed; currently short
+  reasoning: 0.04        # seed-backed; currently short
+  math: 0.02             # seed-backed; currently short
+  coding: 0.02           # seed-backed; currently short
+
+# Bound how much each builder is asked for, so a build does not take an hour.
+max_translation: 40000
+max_grammar: 30000
+max_summarization: 15000
+
+# Both directions. A model trained only kaa->X translates out of Karakalpak
+# and not into it, and into is the direction a Karakalpak assistant needs.
+both_translation_directions: true
+grammar_explanations: true

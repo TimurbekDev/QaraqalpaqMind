@@ -1,0 +1,94 @@
+# Supervised fine-tuning on top of the Phase 5 CPT adapter, one 24GB card.
+#
+#   qm sft build                                     # build the mixture first
+#   qm train sft --config configs/sft/qwen3_8b_qlora_24gb.yaml
+#
+# SFT runs AFTER continued pretraining, not instead of it. CPT teaches the
+# language; SFT teaches the model to be useful in it. Pointing cpt_adapter at
+# null trains the base model directly, which asks an 8B model to learn
+# Karakalpak from 50k instruction pairs - it cannot.
+
+method: qlora
+
+# The Phase 5 output. Merged into the base weights before the SFT adapter is
+# attached, so later stages carry one adapter rather than two.
+cpt_adapter: models/cpt/qlora_24gb
+
+dataset: sft_v1
+
+# Shorter than CPT's 2048: SFT examples are conversations, not documents, and
+# packing is off, so a longer window is mostly padding.
+max_sequence_length: 1024
+
+# Loss on assistant turns only. Without it the model learns to produce user
+# questions as readily as answers, which at inference looks like the model
+# continuing your turn instead of replying to it.
+completion_only_loss: true
+
+model:
+  name: Qwen/Qwen3-8B
+  revision: null
+  attn_implementation: sdpa
+  torch_dtype: bfloat16
+  use_cache: false
+
+quantization:
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_compute_dtype: bfloat16
+
+lora:
+  # Lower rank than CPT's 64. SFT teaches a response style on far less data;
+  # a large adapter here mostly increases the chance of overfitting.
+  r: 32
+  alpha: 64
+  dropout: 0.05
+  bias: none
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  modules_to_save: []
+
+optim:
+  # Lower than CPT's 1e-4. The dataset is smaller and every example is an exact
+  # target, so SFT overfits faster.
+  learning_rate: 2.0e-5
+  optimizer: adamw_torch_fused
+  weight_decay: 0.01
+  adam_beta2: 0.95
+  max_grad_norm: 1.0
+  lr_scheduler: cosine
+  warmup_ratio: 0.05
+  min_lr_ratio: 0.1
+
+runtime:
+  # Three epochs. The config validator rejects more than five: SFT overfits
+  # much faster than continued pretraining.
+  num_epochs: 3.0
+  max_steps: null
+  per_device_batch_size: 2
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  bf16: true
+  fp16: false
+  tf32: true
+  seed: 20260731
+
+logging:
+  output_dir: models/sft/qlora_24gb
+  run_name: qwen3-8b-kaa-sft-qlora24
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 100
+  save_total_limit: 3
+  report_to: [wandb]
+  wandb_project: qaraqalpaqmind
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false

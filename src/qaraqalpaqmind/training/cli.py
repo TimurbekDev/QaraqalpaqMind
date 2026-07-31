@@ -168,6 +168,30 @@ def cpt(
     console.print(f"[green]Done.[/] Adapter written to {output}")
 
 
+@app.command()
+def sft(
+    config_path: str = typer.Option("sft/qwen3_8b_qlora_24gb.yaml", "--config", "-c"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate the config and stop."),
+) -> None:
+    """Run supervised fine-tuning on top of the CPT adapter."""
+    from .sft.config import SFTConfig
+
+    config = load_config(config_path, SFTConfig)
+
+    if dry_run:
+        console.print(f"[green]Config valid[/]: {config_path}")
+        console.print(
+            f"  method={config.method.value} dataset={config.dataset} "
+            f"cpt_adapter={config.cpt_adapter}"
+        )
+        return
+
+    from .sft.train import run as run_sft
+
+    output = run_sft(config)
+    console.print(f"[green]Done.[/] Adapter written to {output}")
+
+
 @app.command("configs")
 def list_configs() -> None:
     """Show the available training configurations."""
