@@ -30,16 +30,18 @@ sources:
     legal: open_license
     license: CC-BY-SA-4.0
     update_frequency: weekly
-    est_size_mb: 22.0
+    est_size_mb: 23.3
     quality: 4
     scripts: [latin]
     priority: 1
     verified_on: 2026-07-31
     notes: >-
-      ~11.5k articles as of March 2026 (was <2k in 2023 - the wiki is growing
-      fast). Official dumps, so no crawling at all. Expect a large share of
-      template-generated geography stubs; Phase 3 length and dedup filters
-      will thin them.
+      MEASURED 2026-07-31 by `qm ingest run wiki_kaa`: 10,199 documents,
+      23.3M chars, ~7.5M estimated tokens, from 15,459 live articles - the
+      difference is redirects and sub-200-char stubs, which a small wiki has a
+      lot of. The wiki is growing fast (<2k articles in 2023).
+      We use the live dump, not the Hugging Face `wikimedia/wikipedia`
+      snapshot: that snapshot is pinned to 2023-11-01 with only 4,070 kaa rows.
 
   - id: hf_karakalpak_corpus_v2
     name: bekan/karakalpak_corpus_v2_m
@@ -49,15 +51,16 @@ sources:
     legal: open_license
     license: MIT
     update_frequency: rarely
-    est_size_mb: 21.4
+    est_size_mb: 17.6
     quality: 4
     scripts: [latin]
     priority: 1
     verified_on: 2026-07-31
     notes: >-
-      135,667 sentences, ~2.2M words, 21.4 MB. Literary + educational + news +
-      public-domain sources. Sentence-level only, so document structure is
-      already lost: good for CPT, useless for long-context training.
+      MEASURED: 129,783 documents kept of 135,667 rows, 17.6M chars, ~5.7M
+      tokens. Literary + educational + news + public-domain sources.
+      Sentence-level only, so document structure is already lost: good for CPT,
+      useless for long-context training.
 
   - id: hf_dilmash_parallel
     name: tahrirchi/dilmash (kaa-uz/ru/en parallel)
@@ -67,16 +70,18 @@ sources:
     legal: open_license
     license: MIT
     update_frequency: rarely
-    est_size_mb: 40.0
+    est_size_mb: 28.4
     quality: 5
     scripts: [latin]
     priority: 1
     verified_on: 2026-07-31
     notes: >-
-      300k pairs (100k each kaa-en / kaa-ru / kaa-uz) from OLDI, arXiv:2409.04269.
-      Composition: 34% books, 24% dictionaries, 23% news, 19% textbooks, plus
-      4k Gatitos pairs. Backbone of the Phase 6 translation SFT set and a clean
-      monolingual Karakalpak source in its own right.
+      MEASURED: 215,417 Karakalpak-side documents from 300k pairs, 28.4M chars,
+      ~9.2M tokens. From OLDI, arXiv:2409.04269. Composition: 34% books, 24%
+      dictionaries, 23% news, 19% textbooks, plus 4k Gatitos pairs.
+      NOTE the splits are named kaa_eng / kaa_rus / kaa_uzb - there is no
+      "train" split. Each record keeps its translation in meta.parallel_text,
+      so Phase 6 can rebuild the pairs without re-downloading.
 
   - id: flores_plus_kaa
     name: FLORES+ dev/devtest (kaa_Latn)
@@ -104,30 +109,45 @@ sources:
     legal: open_license
     license: ODC-BY-1.0
     update_frequency: static
-    est_size_mb: 60.0
+    est_size_mb: 0.0
     quality: 2
     scripts: [latin, cyrillic]
-    priority: 2
+    priority: 5
+    enabled: false
     verified_on: 2026-07-31
     notes: >-
-      Common Crawl derived and audited, but still noisy. Expect Uzbek/Kazakh
-      leakage and heavy boilerplate; run our own language ID over it. Volume is
-      the point, not quality. Overlaps GlotCC substantially - dedup jointly.
+      NOT AVAILABLE - CORRECTION. The MADLAD-400 paper covers 419 languages
+      including Karakalpak, but the Hugging Face repo does not ship it. The
+      `data-v1p5/` tree contains 82 languages and `kaa` is not among them; the
+      only files matching "kaa" are membership-inference canaries. Loading it
+      fails with "BuilderConfig 'kaa' not found. Available: ['default']".
+      This removes ~60 MB from the earlier corpus estimate. Re-check if AllenAI
+      publishes the remaining languages.
 
   - id: glotcc_kaa
-    name: GlotCC-V1 (kaa)
+    name: GlotCC-V1 (kaa, both scripts)
     kind: dataset
     access: hf
     url: https://huggingface.co/datasets/cis-lmu/GlotCC-V1
     legal: open_license
     license: CC0-1.0
     update_frequency: rarely
-    est_size_mb: 30.0
+    est_size_mb: 1.7
     quality: 2
     scripts: [latin, cyrillic]
     priority: 2
     verified_on: 2026-07-31
-    notes: Document-level CommonCrawl corpus with GlotLID labels. Heavy overlap with MADLAD-400.
+    notes: >-
+      MEASURED - MUCH SMALLER THAN ESTIMATED. 172 documents total (19 Latin,
+      153 Cyrillic), 1.67M chars, ~537k tokens. Row counts confirmed directly
+      from the parquet metadata, so this is the true size, not a loader bug.
+      The earlier 30 MB figure was wrong by a factor of ~20.
+      Loaded via data_files (no per-language builder config):
+      v1.0/kaa-Latn/kaa-Latn_0.parquet and v1.0/kaa-Cyrl/kaa-Cyrl_0.parquet.
+      Carries per-document WARC provenance, which we keep.
+      CAUTION: much of it is scraped kaa.wikipedia, so it overlaps wiki_kaa -
+      Phase 3 dedup must run ACROSS sources, not only within them.
+      With MADLAD-400 unavailable this is our only Common Crawl source.
 
   - id: nllb_kaa
     name: NLLB mined bitext (kaa_Latn)

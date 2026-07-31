@@ -1,0 +1,17 @@
+{
+  "source_id": "glotcc_kaa",
+  "created_at": "2026-07-31T11:32:09.596188Z",
+  "license": "CC0-1.0",
+  "source_url": "https://huggingface.co/datasets/cis-lmu/GlotCC-V1",
+  "path": "D:/Dev/open-source/QaraqalpaqMind/data/interim/glotcc_kaa.jsonl.zst",
+  "sha256": "48999fb2033bd1731afd8d0c56887a4b29148c4f1e2db9de58f34e85d40ccb95",
+  "size_bytes": 213137,
+  "documents": 172,
+  "characters": 1665294,
+  "words": 193444,
+  "estimated_tokens": 537188,
+  "scripts": {
+    "latin": 19,
+    "cyrillic": 153
+  }
+}

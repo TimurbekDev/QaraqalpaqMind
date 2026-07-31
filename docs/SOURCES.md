@@ -13,14 +13,60 @@ The machine-readable version is [`configs/crawl/sources.yaml`](../configs/crawl/
 
 ## 1. The headline number
 
-| | MB of Karakalpak text |
-|---|---|
-| Open-licence bulk datasets (no crawling) | ~174 |
-| Verified live web, crawlable today | ~78 |
-| Blocked / needs permission / needs OCR | ~60 |
-| **Realistically obtainable, tier 1 + 2** | **~250 MB** |
+> **Revised 2026-07-31 after actually ingesting Tier 1.** The first version of this
+> section estimated ~174 MB from bulk datasets. The measured figure is **71 MB**.
+> Two estimates were badly wrong and both are corrected below. Numbers in this
+> table are now *measured*, not projected.
 
-250 MB of text is roughly **60–75 million Qwen3 tokens** after cleaning and deduplication — and expect to lose 30–50% of the web portion in Phase 3.
+### Tier 1, measured by `qm ingest run`
+
+| Source | Documents | Characters | ~Tokens | vs. estimate |
+|---|---:|---:|---:|---|
+| `hf_dilmash_parallel` | 215,417 | 28.4 M | 9.2 M | 40 MB → 28.4 MB |
+| `wiki_kaa` | 10,199 | 23.3 M | 7.5 M | 22 MB → 23.3 MB ✅ |
+| `hf_karakalpak_corpus_v2` | 129,783 | 17.6 M | 5.7 M | 21.4 MB → 17.6 MB |
+| `glotcc_kaa` | 172 | 1.7 M | 0.5 M | **30 MB → 1.7 MB** ❌ |
+| `madlad400_kaa` | — | — | — | **60 MB → 0, unavailable** ❌ |
+| `flores_plus_kaa` | gated | — | — | held out anyway |
+| **Total** | **355,571** | **71.0 M** | **22.9 M** | 174 MB → **71 MB** |
+
+### The two corrections
+
+**MADLAD-400 does not ship Karakalpak.** The paper covers 419 languages, but the
+Hugging Face repo's `data-v1p5/` tree contains only 82, and `kaa` is not among
+them — the only files matching "kaa" are membership-inference canaries. Loading
+fails with `BuilderConfig 'kaa' not found. Available: ['default']`. **−60 MB.**
+
+**GlotCC-V1 has 172 Karakalpak documents, not 30 MB.** Confirmed straight from
+the parquet metadata: 19 rows in `kaa-Latn`, 153 in `kaa-Cyrl`. **−28 MB.**
+
+### What this means
+
+| | Karakalpak text |
+|---|---|
+| Tier 1 bulk datasets, **measured** | **71 MB / ~23 M tokens** |
+| Verified live web, estimated | ~50–78 MB |
+| Needs permission (kitapxana, sozlik) | ~28 MB |
+| **Realistic ceiling** | **~150 MB / ~45 M tokens** |
+
+And that is *before* deduplication. Expect real losses: GlotCC is largely scraped
+`kaa.wikipedia`, so it overlaps `wiki_kaa` almost entirely, and `dilmash` draws
+23% of its pairs from news sources we are also crawling.
+
+**A defensible working figure is 25–35 M unique tokens.**
+
+This does not change the plan, but it sharpens it. At this scale, continued
+pretraining is **adaptation**, not language acquisition: we are teaching a model
+that already knows Kazakh, Uzbek, Turkish and Russian that this Kipchak relative
+exists, and grounding it in Karakalpak orthography, morphology and
+Karakalpakstan-specific facts. Qwen3-8B saw on the order of 36 trillion tokens;
+25 M is 0.00007% of that.
+
+Two consequences to carry into Phase 5:
+- **LoRA over full fine-tuning.** Full-parameter training on 8B weights with
+  25 M tokens overfits and destroys the multilingual transfer we depend on.
+- **Data quality outranks data volume.** There is no volume to fall back on, so
+  Phase 3's filters and Phase 6's hand-built SFT data carry the result.
 
 **Calibrate expectations now:** Qwen3-8B saw on the order of 36 trillion tokens. Karakalpak is not going to be *learned* from scratch here. The realistic goal for continued pretraining is **adaptation** — teaching a model that already knows Kazakh, Uzbek, Turkish and Russian that this closely-related Kipchak language exists, and grounding it in Karakalpak orthography, morphology and Karakalpakstan-specific facts. That is achievable with 50–100M tokens. Building a Karakalpak model from zero is not.
 

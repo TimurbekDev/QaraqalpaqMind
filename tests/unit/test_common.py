@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from qaraqalpaqmind.common import PROJECT_ROOT, read_jsonl, text_sha1, write_jsonl
+from qaraqalpaqmind.common import (
+    PROJECT_ROOT,
+    count_lines,
+    read_jsonl,
+    text_sha1,
+    write_jsonl,
+)
 from qaraqalpaqmind.common.config import StrictModel, load_config, load_raw
 
 
@@ -14,13 +20,28 @@ def test_project_root_points_at_repo() -> None:
     assert (PROJECT_ROOT / "pyproject.toml").is_file()
 
 
-def test_jsonl_roundtrip_preserves_unicode(tmp_path: Path) -> None:
-    records = [
-        {"id": "1", "text": "Qaraqalpaqstan Respublikası", "lang": "kaa"},
-        {"id": "2", "text": "Қарақалпақстан Республикасы", "script": "cyrillic"},
-    ]
-    target = tmp_path / "sample.jsonl"
-    assert write_jsonl(target, records) == 2
+_RECORDS = [
+    {"id": "1", "text": "Qaraqalpaqstan Respublikası", "lang": "kaa"},
+    {"id": "2", "text": "Қарақалпақстан Республикасы", "script": "cyrillic"},
+]
+
+
+@pytest.mark.parametrize("name", ["sample.jsonl", "sample.jsonl.gz", "sample.jsonl.zst"])
+def test_jsonl_roundtrip_preserves_unicode(tmp_path: Path, name: str) -> None:
+    # Every compression path must be exercised. Writing zstd worked long before
+    # reading it did, because its stream_reader has no readline().
+    target = tmp_path / name
+    assert write_jsonl(target, _RECORDS) == 2
+    assert list(read_jsonl(target)) == _RECORDS
+    assert count_lines(target) == 2
+
+
+@pytest.mark.parametrize("name", ["big.jsonl.zst", "big.jsonl.gz"])
+def test_compressed_roundtrip_spans_buffer_boundaries(tmp_path: Path, name: str) -> None:
+    # A handful of records fits in one buffer and can hide framing bugs.
+    records = [{"i": i, "text": "Qaraqalpaqstan Respublikası " * 20} for i in range(5_000)]
+    target = tmp_path / name
+    assert write_jsonl(target, records) == 5_000
     assert list(read_jsonl(target)) == records
 
 

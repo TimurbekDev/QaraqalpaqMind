@@ -33,6 +33,13 @@ crawl = [
     "pypdf>=5.1",
     "pdfplumber>=0.11",
 ]
+ingest = [
+    "datasets>=3.2",
+    "huggingface-hub>=0.27",
+    "mwparserfromhell>=0.6.6",
+    "zstandard>=0.23",
+    "pyarrow>=18.0",
+]
 clean = [
     "regex>=2024.11",
     "ftfy>=6.3",
@@ -122,7 +129,15 @@ plugins = ["pydantic.mypy"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["trafilatura.*", "datasketch.*", "fasttext.*", "selectolax.*", "zstandard.*"]
+module = [
+    "trafilatura.*",
+    "datasketch.*",
+    "fasttext.*",
+    "selectolax.*",
+    "zstandard.*",
+    "datasets.*",
+    "mwparserfromhell.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

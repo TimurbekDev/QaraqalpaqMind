@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
+import io
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -39,14 +40,21 @@ def _open_text(path: Path, mode: str) -> Iterator[IO[bytes]]:
         raw = path.open(binary_mode)
         try:
             if mode == "r":
-                reader = zstandard.ZstdDecompressor().stream_reader(raw)
+                # zstandard's stream_reader is a raw, unbuffered stream: it
+                # implements read() but not readline(), so iterating it line by
+                # line raises io.UnsupportedOperation. BufferedReader supplies
+                # the line protocol the rest of the pipeline expects.
+                reader = io.BufferedReader(zstandard.ZstdDecompressor().stream_reader(raw))
                 yield reader
             else:
                 writer = zstandard.ZstdCompressor(level=_ZSTD_LEVEL).stream_writer(raw)
                 try:
                     yield writer
                 finally:
-                    writer.close()
+                    # Must close explicitly: the zstd frame is only finalised
+                    # here, and an unclosed writer leaves a truncated file that
+                    # reads as empty rather than as an error.
+                    writer.close()  # type: ignore[no-untyped-call]
         finally:
             raw.close()
     elif suffixes.endswith(".gz"):

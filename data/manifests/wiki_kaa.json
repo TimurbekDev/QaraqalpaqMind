@@ -1,0 +1,17 @@
+{
+  "source_id": "wiki_kaa",
+  "created_at": "2026-07-31T11:44:17.836123Z",
+  "license": "CC-BY-SA-4.0",
+  "source_url": "https://dumps.wikimedia.org/kaawiki/",
+  "path": "D:/Dev/open-source/QaraqalpaqMind/data/interim/wiki_kaa.jsonl.zst",
+  "sha256": "81fadf37027a4256637ca3dbf52becbc840d6e2adf41d271b9900f94bc9cffe9",
+  "size_bytes": 7279333,
+  "documents": 10199,
+  "characters": 23270035,
+  "words": 2866222,
+  "estimated_tokens": 7506563,
+  "scripts": {
+    "latin": 10164,
+    "mixed": 35
+  }
+}

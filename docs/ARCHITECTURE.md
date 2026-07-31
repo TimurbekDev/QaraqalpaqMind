@@ -10,6 +10,12 @@
                  ┌────────────────┐          ▼
                  │ preprocessing/ │──► data/interim/<source_id>.jsonl.zst
                  └────────────────┘        (text extracted, still dirty)
+                                             ▲
+                 ┌─────────────┐             │
+   dumps, HF ──► │   ingest/   │─────────────┘  + data/manifests/<source_id>.json
+                 └─────────────┘        (bulk sources skip raw/: the upstream
+                                         artefact is already the archive, and
+                                         is checksum-verified instead)
                                              │
                  ┌─────────────┐             ▼
                  │  cleaning/  │──► data/processed/<source_id>/part-*.jsonl.zst

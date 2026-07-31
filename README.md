@@ -40,7 +40,10 @@ QaraqalpaqMind/
 │   ├── common/              # paths, logging, config loading, JSONL I/O
 │   ├── crawlers/            # Phase 2: polite, resumable source-specific fetchers
 │   │   ├── core/            #   shared HTTP client, robots.txt, rate limiter, state store
-│   │   └── sources/         #   one module per source (wikipedia, news, gov, pdf, ...)
+│   │   └── sources/         #   one module per crawled site
+│   ├── ingest/              # Phase 2: bulk loaders — Wikipedia dumps, HF datasets
+│   │                        #   (crawlers fetch page by page; ingesters pull in bulk;
+│   │                        #    both emit the same Document records + a manifest)
 │   ├── preprocessing/       # Phase 3a: HTML→text, PDF→text, OCR fixes, segmentation
 │   ├── cleaning/            # Phase 3b: quality heuristics, spam/ads/boilerplate filters
 │   ├── dedup/               # Phase 3c: exact hashing + MinHash-LSH near-duplicate removal

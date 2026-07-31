@@ -84,6 +84,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("crawl group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .ingest.cli import app as ingest_app
+
+        app.add_typer(ingest_app, name="ingest")
+    except ImportError as exc:
+        logger.debug("ingest group unavailable", extra={"error": str(exc)})
+
     # Registered as each phase lands:
     # from .cleaning.cli import app as clean_app;  app.add_typer(clean_app, name="clean")
     # from .training.cli import app as train_app;  app.add_typer(train_app, name="train")

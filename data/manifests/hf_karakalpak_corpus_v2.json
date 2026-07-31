@@ -1,0 +1,19 @@
+{
+  "source_id": "hf_karakalpak_corpus_v2",
+  "created_at": "2026-07-31T11:05:39.100255Z",
+  "license": "MIT",
+  "source_url": "https://huggingface.co/datasets/bekan/karakalpak_corpus_v2_m",
+  "path": "D:/Dev/open-source/QaraqalpaqMind/data/interim/hf_karakalpak_corpus_v2.jsonl.zst",
+  "sha256": "e0c69593079ad4273ce1f945979d60c2af60baa3e40dd1186069b22ebe6ce394",
+  "size_bytes": 9039261,
+  "documents": 129783,
+  "characters": 17649917,
+  "words": 2194421,
+  "estimated_tokens": 5693199,
+  "scripts": {
+    "latin": 129633,
+    "mixed": 130,
+    "cyrillic": 19,
+    "unknown": 1
+  }
+}
