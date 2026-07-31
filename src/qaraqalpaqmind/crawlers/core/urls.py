@@ -19,13 +19,20 @@ from .registry import SourceSpec
 
 logger = get_logger(__name__)
 
-# Query parameters that never change the content served.
+# Query parameters that never change the article a URL serves.
 _TRACKING_PARAMS: frozenset[str] = frozenset(
     {
+        # analytics and referral tagging
         "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
         "utm_id", "utm_name", "fbclid", "gclid", "yclid", "msclkid", "igshid",
         "_ga", "_gl", "mc_cid", "mc_eid", "ref", "referrer", "source",
         "share", "from", "spm",
+        # Comment permalinks and alternate renderings of the SAME article.
+        # Measured on shagalalab.com: `?showComment=<timestamp>` produced 12
+        # frontier entries for one post, so we fetched it twelve times and got
+        # twelve near-identical documents. Blogger and WordPress both do this.
+        "showComment", "showcomment", "replytocom", "commentpage",
+        "amp", "output", "print", "print_preview", "format",
     }
 )
 

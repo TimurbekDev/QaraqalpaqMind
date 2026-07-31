@@ -48,6 +48,22 @@ def test_normalise_url(raw: str, expected: str) -> None:
     assert normalise_url(raw) == expected
 
 
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "https://example.uz/qq/post.html?showComment=1550564317470",
+        "https://example.uz/qq/post.html?replytocom=42",
+        "https://example.uz/qq/post.html?amp=1",
+        "https://example.uz/qq/post.html?print=1",
+    ],
+)
+def test_comment_permalinks_collapse_to_the_article(raw: str) -> None:
+    # Regression: shagalalab.com produced twelve frontier entries for one post
+    # via ?showComment=<timestamp>, so it was fetched twelve times and yielded
+    # twelve near-identical documents.
+    assert normalise_url(raw) == "https://example.uz/qq/post.html"
+
+
 def test_normalise_url_sorts_remaining_query_params() -> None:
     # Same page, two param orders, must collapse to one frontier entry.
     a = normalise_url("https://example.uz/qq/?b=2&a=1")
