@@ -105,6 +105,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("dedup group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .tokenizer.cli import app as tokenizer_app
+
+        app.add_typer(tokenizer_app, name="tokenizer")
+    except ImportError as exc:
+        logger.debug("tokenizer group unavailable", extra={"error": str(exc)})
+
     # Registered as each phase lands:
     # from .training.cli import app as train_app;  app.add_typer(train_app, name="train")
 

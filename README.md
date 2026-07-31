@@ -6,18 +6,23 @@ Base model: **Qwen3-8B** → Continued Pretraining → SFT → DPO → RAG → v
 
 > **Status:** Phase 1 complete, Phase 2 in progress. See [docs/ROADMAP.md](docs/ROADMAP.md).
 >
-> **Corpus: 286,434 unique documents / 66.0 M characters / ~21.3 M unique tokens**
+> **Corpus: 286,434 unique documents / 66.0 M characters / 28.7 M Qwen3 tokens**
 > (`pretrain_v1`), measured end to end by running the pipeline — crawl, clean, dedup —
-> not estimated at any stage. See [docs/SOURCES.md](docs/SOURCES.md).
+> and counted with the real tokenizer, not estimated.
+> See [docs/SOURCES.md](docs/SOURCES.md) and [docs/TOKENIZER.md](docs/TOKENIZER.md).
 >
 > An opening ~250 MB projection did not survive contact: MADLAD-400 ships no Karakalpak
 > at all, GlotCC-V1 has 172 documents rather than 30 MB, and the live Karakalpak web is
 > ~11 MB rather than 78 MB. Deduplication then removed a further 17.2%.
 >
 > That makes this an **adaptation** project, not a from-scratch one. Qwen3-8B saw ~36 T
-> tokens; 21.3 M unique Karakalpak tokens is enough to teach a model that already knows
+> tokens; 28.7 M Karakalpak tokens is enough to teach a model that already knows
 > Kazakh, Uzbek and Turkish about this Kipchak relative — and not enough for
 > full-parameter fine-tuning, which is why Phase 5 uses LoRA.
+>
+> Karakalpak costs **1.88× more tokens than English** for identical content. Uzbek, its
+> closest well-resourced relative, costs 1.75× — so most of that is agglutinative
+> morphology rather than a Karakalpak-shaped hole in Qwen3's vocabulary.
 
 ---
 

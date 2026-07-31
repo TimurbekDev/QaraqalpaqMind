@@ -27,7 +27,13 @@ estimated at any stage.
 |---|---:|---:|---:|
 | Ingested (`data/interim/`) | 358,077 | 77.6 M | 25.2 M |
 | Cleaned (`data/processed/`) | 345,872 | 77.1 M | 24.9 M |
-| **Deduplicated (`pretrain_v1`)** | **286,434** | **66.0 M** | **21.3 M** |
+| **Deduplicated (`pretrain_v1`)** | **286,434** | **66.0 M** | **28.7 M** |
+
+The token column above was an estimate (`chars / 3.1`) until Phase 4 measured it
+against the actual Qwen3 tokenizer. The real count for `pretrain_v1` is
+**28,683,631 tokens — 1.35× the estimate**. Karakalpak costs 1.88× more tokens
+than English for identical content, and 2.30 characters per token.
+See [TOKENIZER.md](TOKENIZER.md).
 
 Deduplication removed 56,331 exact and 3,107 near duplicates — 17.2% of the
 cleaned corpus. Where it came from is informative:
