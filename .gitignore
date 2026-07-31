@@ -22,6 +22,10 @@ data/raw/**
 data/interim/**
 data/processed/**
 data/datasets/**
+data/state/**
+*.db
+*.db-wal
+*.db-shm
 !data/**/.gitkeep
 !data/**/README.md
 !data/manifests/**
