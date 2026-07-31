@@ -126,6 +126,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("tokenizer group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .schemas.cli import app as schema_app
+
+        app.add_typer(schema_app, name="schema")
+    except ImportError as exc:
+        logger.debug("schema group unavailable", extra={"error": str(exc)})
+
     # Registered as each phase lands:
     # from .training.cli import app as train_app;  app.add_typer(train_app, name="train")
 
