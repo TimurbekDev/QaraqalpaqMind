@@ -1,0 +1,32 @@
+# Development: no GPU, no download, no model.
+#
+#   qm serve --config configs/serve/dev.yaml
+#
+# The echo backend returns a canned Karakalpak reply. Every route, header,
+# SSE frame and error envelope behaves exactly as in production, so the
+# frontend can be built and tested against this today.
+
+served_model_name: qaraqalpaqmind
+
+backend:
+  kind: echo
+
+auth:
+  # Off locally so `curl` works without a key. NEVER off on a public host.
+  enabled: false
+
+rate_limit:
+  enabled: false
+
+server:
+  host: 127.0.0.1
+  port: 8000
+  cors_origins:
+    - http://localhost:3000
+    - http://127.0.0.1:3000
+
+observability:
+  metrics_enabled: true
+  # Safe locally; both stay false in production, where prompts are user content.
+  log_prompts: true
+  log_completions: true

@@ -1,0 +1,46 @@
+# Production: vLLM in a separate process, auth and limits on.
+#
+#   vllm serve models/merged/qwen3-8b-kaa --port 8001 --served-model-name qaraqalpaqmind
+#   export QM_API_KEYS="key-one,key-two"
+#   qm serve --config configs/serve/production.yaml
+#
+# vLLM runs separately on purpose: this gateway restarts in a second, a process
+# holding 16 GB of weights takes a minute. Coupling them would make every auth
+# change cost a model reload.
+
+served_model_name: qaraqalpaqmind
+
+backend:
+  kind: vllm
+  model: qaraqalpaqmind          # must match --served-model-name
+  vllm_url: http://vllm:8001/v1
+  request_timeout: 300.0
+
+auth:
+  enabled: true
+  # Keys come from the environment, never from this file, so the config can be
+  # committed and the keys cannot be committed with it. No keys configured
+  # means every request is refused rather than the endpoint being left open.
+  keys_env_var: QM_API_KEYS
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 60
+  burst: 10
+  # The limit that actually protects the GPU: one caller opening many streaming
+  # requests occupies it indefinitely while staying under any per-minute cap.
+  max_concurrent_per_key: 4
+
+server:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins:
+    - https://qaraqalpaqmind.example
+  max_request_bytes: 1000000
+
+observability:
+  metrics_enabled: true
+  # Prompts are user content and often contain personal data. Off unless there
+  # is a stated reason and a retention policy.
+  log_prompts: false
+  log_completions: false

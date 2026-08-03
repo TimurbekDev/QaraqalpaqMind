@@ -93,14 +93,18 @@ rag = [
     "langchain-text-splitters>=0.3",
 ]
 serve = [
-    "vllm>=0.7",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
     "sse-starlette>=2.2",
-    "slowapi>=0.1.9",
-    "python-jose[cryptography]>=3.3",
-    "passlib[bcrypt]>=1.7",
-    "prometheus-fastapi-instrumentator>=7.0",
+    "httpx>=0.28",
+    "prometheus-client>=0.21",
+]
+# vLLM is deliberately NOT in `serve`. It is Linux+CUDA only and pulls its own
+# pinned torch, so putting it there makes the API impossible to develop on a
+# laptop - and the API does not need it: the backend is swappable, and the
+# `transformers` or `echo` backend covers development and tests.
+vllm = [
+    "vllm>=0.7; platform_system == 'Linux'",
 ]
 dev = [
     "pytest>=8.3",

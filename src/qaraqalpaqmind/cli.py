@@ -154,6 +154,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("dpo group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .api.cli import app as serve_app
+
+        app.add_typer(serve_app, name="serve")
+    except ImportError as exc:
+        logger.debug("serve group unavailable", extra={"error": str(exc)})
+
 
 _register_groups()
 

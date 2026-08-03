@@ -1,0 +1,36 @@
+# Development against a real (small) model, in-process.
+#
+#   qm serve --config configs/serve/local_model.yaml
+#
+# Qwen3-0.6B is a few hundred megabytes and runs on CPU. It uses the same
+# Qwen3 chat template and tokenizer as the 8B model, so prompt formatting,
+# streaming and token accounting behave as they will in production.
+#
+# Single-threaded: one slow request blocks the rest. That is fine for
+# development and is why production uses vLLM.
+
+served_model_name: qaraqalpaqmind
+
+backend:
+  kind: transformers
+  # Swap to models/merged/qwen3-8b-kaa once training has run.
+  model: Qwen/Qwen3-0.6B
+  dtype: auto
+  max_new_tokens: 512
+
+auth:
+  enabled: false
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 60
+  max_concurrent_per_key: 1   # in-process generation blocks; serialise it
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+observability:
+  metrics_enabled: true
+  log_prompts: true
+  log_completions: false
