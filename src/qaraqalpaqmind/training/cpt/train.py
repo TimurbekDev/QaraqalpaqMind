@@ -19,6 +19,7 @@ from ...common.io import read_jsonl
 from ...common.logging import get_logger
 from ...common.paths import PROJECT_ROOT
 from ...dedup.pipeline import output_path
+from ..checkpoints import resolve_resume
 from ..config import CPTConfig, TuningMethod
 from .packing import PackingStats, pack_documents
 
@@ -104,8 +105,19 @@ def build_dataset(config: CPTConfig, tokenizer: Any) -> tuple[Any, Any, PackingS
 
     source = output_path(config.data.dataset)
     if not source.exists():
+        # `data/` is not in git, so this is the first thing a fresh clone on a
+        # GPU host hits. Name every way out rather than one.
         raise FileNotFoundError(
-            f"No dataset at {source}. Build it with `qm dedup run` first."
+            f"No dataset at {source}.\n"
+            "\n"
+            "data/ is not in git, so a fresh clone has no corpus. Choose one:\n"
+            "  a) pull the corpus you built elsewhere:\n"
+            "       qm ingest pull <your-name>/qaraqalpaqmind-data\n"
+            "  b) rebuild from public sources only (no crawling, ~93% of it):\n"
+            "       qm ingest all --bulk-only && qm clean all && qm dedup run\n"
+            "  c) copy the file to the path above yourself (it is ~35 MB)\n"
+            "\n"
+            "See docs/DEPLOYMENT.md section 3."
         )
 
     stats = PackingStats()
@@ -210,7 +222,10 @@ def run(config: CPTConfig) -> Path:
     model = load_model(config)
     trainer = build_trainer(config, model, tokenizer, train_set, eval_set)
 
-    trainer.train()
+    # Resolved before training so an interrupted pod resumes rather than
+    # silently restarting from step 0.
+    resume = resolve_resume(config.runtime.resume_from_checkpoint, Path(trainer.args.output_dir))
+    trainer.train(resume_from_checkpoint=resume)
 
     output_dir = Path(trainer.args.output_dir)
     trainer.save_model(str(output_dir))

@@ -79,6 +79,8 @@ runtime:
   fp16: false
   tf32: true
   seed: 20260731
+  # Resume after a pod reclaim rather than silently restarting at step 0.
+  resume_from_checkpoint: auto
 
 logging:
   output_dir: models/sft/qlora_24gb

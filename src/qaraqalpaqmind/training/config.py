@@ -159,6 +159,15 @@ class RuntimeConfig(StrictModel):
     seed: int = 20260731
     dataloader_pin_memory: bool = True
 
+    # Resume from a checkpoint in `output_dir`.
+    #   "auto"  - continue from the newest checkpoint if one exists, else start
+    #             fresh. This is the right default on interruptible cloud GPUs,
+    #             where a pod can be reclaimed mid-run and a restart that
+    #             silently began from step 0 would waste the whole run.
+    #   "never" - always start fresh.
+    #   <path>  - resume from that specific checkpoint directory.
+    resume_from_checkpoint: str = "auto"
+
     @model_validator(mode="after")
     def _one_precision_mode(self) -> RuntimeConfig:
         if self.bf16 and self.fp16:

@@ -12,8 +12,45 @@ from typing import Final
 
 _THIS_FILE: Final[Path] = Path(__file__).resolve()
 
-# src/qaraqalpaqmind/common/paths.py -> repo root is 4 levels up.
-PROJECT_ROOT: Final[Path] = _THIS_FILE.parents[3]
+# Files that identify a checkout rather than an installed package.
+_ROOT_MARKERS: Final[tuple[str, ...]] = ("pyproject.toml", "configs")
+
+
+def _looks_like_checkout(candidate: Path) -> bool:
+    return all((candidate / marker).exists() for marker in _ROOT_MARKERS)
+
+
+def _resolve_project_root() -> Path:
+    """Locate the repository root.
+
+    Deriving it from `__file__` alone assumes an editable install. Under a
+    regular `pip install`, `src/qaraqalpaqmind/common/paths.py` becomes
+    `site-packages/qaraqalpaqmind/common/paths.py`, and four levels up lands
+    somewhere in the interpreter's lib directory - so `configs/` and `data/`
+    silently resolve to paths that do not exist.
+
+    Checked in order: an explicit override, the working directory, then the
+    derived path.
+    """
+    override = os.getenv("QM_PROJECT_ROOT", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+
+    # src/qaraqalpaqmind/common/paths.py -> repo root is 4 levels up.
+    derived = _THIS_FILE.parents[3]
+    if _looks_like_checkout(derived):
+        return derived
+
+    for candidate in (Path.cwd(), *Path.cwd().parents):
+        if _looks_like_checkout(candidate):
+            return candidate
+
+    # Nothing matched: fall back to the derived path so behaviour is unchanged
+    # for anyone who was relying on it.
+    return derived
+
+
+PROJECT_ROOT: Final[Path] = _resolve_project_root()
 
 
 def _dir_from_env(env_var: str, default: Path) -> Path:

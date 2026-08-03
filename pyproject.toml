@@ -7,7 +7,13 @@ name = "qaraqalpaqmind"
 version = "0.1.0"
 description = "Open-source Large Language Model stack for the Karakalpak language"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+# 3.12 is a hard floor: `common/config.py` uses PEP 695 generics
+# (`def load_config[T: StrictModel]`), which 3.11 cannot parse at all.
+#
+# The ceiling was <3.13, which would have refused to install on cloud GPU
+# images shipping 3.13. torch has supported 3.13 since 2.5, so that bound
+# blocked deployment without protecting anything.
+requires-python = ">=3.12,<3.14"
 license = { text = "Apache-2.0" }
 authors = [{ name = "QaraqalpaqMind contributors" }]
 keywords = ["llm", "karakalpak", "qaraqalpaq", "low-resource", "nlp", "qwen3"]
@@ -52,15 +58,33 @@ clean = [
     "pandas>=2.2",
 ]
 train = [
+    # torch is listed but will NOT be reinstalled on a machine that already has
+    # a CUDA build satisfying this bound - the RunPod PyTorch template ships
+    # 2.8.0, which does. Reinstalling it there would risk replacing a
+    # CUDA-matched wheel with a mismatched one.
     "torch>=2.5",
     "transformers>=4.48",
     "trl>=0.13",
     "peft>=0.14",
     "accelerate>=1.2",
     "bitsandbytes>=0.45",
-    "deepspeed>=0.16",
-    "flash-attn>=2.7; platform_system == 'Linux'",
     "wandb>=0.19",
+]
+# Multi-GPU sharding only. Not needed for a single card, and a large install.
+distributed = [
+    "deepspeed>=0.16",
+]
+# flash-attn is deliberately NOT in `train`. It has no prebuilt wheel for most
+# torch/CUDA combinations, so pip compiles it from source: 10-30 minutes, high
+# RAM, and it fails outright if torch is not already importable at build time.
+# Putting it in `train` means a routine install can fail or hang.
+#
+# It is optional: `sdpa` is PyTorch-native, needs no build, and is the default
+# in every shipped config. flash_attention_2 is somewhat faster and uses less
+# activation memory on Ada/Hopper cards, so install it deliberately if wanted:
+#     pip install -e ".[flash]" --no-build-isolation
+flash = [
+    "flash-attn>=2.7; platform_system == 'Linux'",
 ]
 rag = [
     "qdrant-client>=1.12",
@@ -150,6 +174,7 @@ module = [
     "deepspeed.*",
     "trl.*",
     "accelerate.*",
+    "flash_attn.*",
 ]
 ignore_missing_imports = true
 disallow_untyped_calls = false

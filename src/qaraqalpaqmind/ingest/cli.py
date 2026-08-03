@@ -94,6 +94,47 @@ def list_sources(
 
 
 @app.command()
+def push(
+    repo_id: str = typer.Argument(..., help="Hub dataset repo, e.g. yourname/qaraqalpaqmind-data"),
+    private: bool = typer.Option(True, "--private/--public"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """Upload built datasets to the Hub, so a GPU host can pull them.
+
+    `data/` is not in git, so a fresh clone on a training machine has no corpus.
+    This is how the built artefacts get there without re-crawling anyone.
+    """
+    from .hub import push as push_datasets
+
+    plan = push_datasets(repo_id, private=private, dry_run=dry_run)
+    verb = "Would upload" if dry_run else "Uploaded"
+    console.print(
+        f"{verb} [green]{len(plan.files)}[/] datasets and {len(plan.manifests)} manifests "
+        f"({plan.total_bytes / 1_048_576:.1f} MB) -> [cyan]{repo_id}[/]"
+    )
+    for path in plan.files:
+        console.print(f"  {path.name:<34}{path.stat().st_size / 1_048_576:>8.1f} MB")
+    if not dry_run and private:
+        console.print(
+            "[bright_black]Repository is private. Several crawled sources have an "
+            "unknown redistribution licence, so publishing is a deliberate choice.[/]"
+        )
+
+
+@app.command()
+def pull(
+    repo_id: str = typer.Argument(..., help="Hub dataset repo to pull from"),
+) -> None:
+    """Download built datasets into data/, ready for training."""
+    from .hub import pull as pull_datasets
+
+    written = pull_datasets(repo_id)
+    console.print(f"Pulled [green]{len(written)}[/] files from [cyan]{repo_id}[/]")
+    for path in written[:10]:
+        console.print(f"  {path}")
+
+
+@app.command()
 def inspect(source: str, rows: int = typer.Option(3, "--rows", "-n", min=1, max=20)) -> None:
     """Print raw dataset rows so a schema mapping can be checked, not guessed."""
     registry = load_registry()

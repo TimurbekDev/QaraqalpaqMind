@@ -150,6 +150,54 @@ def _warn(config: CPTConfig, schedule: dict[str, int | float]) -> None:
 
 
 @app.command()
+def preflight(
+    config_path: str = typer.Option(_DEFAULT_CONFIG, "--config", "-c"),
+) -> None:
+    """Check the machine can run this config, before downloading 16 GB."""
+    from ..common.runtime import Finding, gpu_info
+    from ..common.runtime import preflight as run_preflight
+
+    config = load_config(config_path, CPTConfig)
+    findings = run_preflight()
+
+    colours = {"ok": "green", "warn": "yellow", "error": "red"}
+    for finding in findings:
+        console.print(f"[{colours[finding.level]}]{finding.level.upper():<5}[/] {finding.message}")
+
+    gpu = gpu_info()
+    if gpu.available and config.model.attn_implementation == "flash_attention_2":
+        try:
+            import flash_attn  # noqa: F401
+        except ImportError:
+            console.print(
+                "[red]ERROR[/] config asks for flash_attention_2 but flash-attn is not "
+                'installed. Either `pip install -e ".[flash]" --no-build-isolation` or '
+                "set model.attn_implementation to sdpa."
+            )
+            findings.append(Finding("error", "flash-attn missing"))
+
+    _checkpoint_state(config)
+
+    if any(f.level == "error" for f in findings):
+        console.print("\n[red]Not ready.[/] Fix the errors above before training.")
+        raise typer.Exit(code=1)
+    console.print("\n[green]Ready to train.[/]")
+
+
+def _checkpoint_state(config: CPTConfig) -> None:
+    from ..common.paths import PROJECT_ROOT
+    from .checkpoints import describe
+
+    output_dir = config.logging.output_dir
+    if not output_dir.is_absolute():
+        output_dir = PROJECT_ROOT / output_dir
+    console.print(f"[bright_black]{describe(output_dir)}[/]")
+    console.print(
+        f"[bright_black]resume policy: {config.runtime.resume_from_checkpoint}[/]"
+    )
+
+
+@app.command()
 def cpt(
     config_path: str = typer.Option(_DEFAULT_CONFIG, "--config", "-c"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate the config and stop."),
@@ -160,6 +208,7 @@ def cpt(
     if dry_run:
         console.print(f"[green]Config valid[/]: {config_path}")
         console.print(f"  method={config.method.value} model={config.model.name}")
+        _checkpoint_state(config)
         return
 
     from .cpt.train import run

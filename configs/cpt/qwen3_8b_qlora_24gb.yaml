@@ -4,21 +4,33 @@
 # people can actually obtain, and everything else scales up from it more
 # easily than down.
 #
-# Memory budget, approximate:
-#   4-bit base weights          ~5.0 GB
-#   LoRA adapters (r=64) + grads ~0.7 GB
-#   AdamW states for adapters    ~0.6 GB
-#   activations w/ checkpointing ~4-6 GB at seq 2048, batch 1
-#   ---------------------------------------------------
-#   total                       ~11-13 GB, leaving headroom for fragmentation
+# VERIFIED for RTX 4090 (24 GB, sm_89, Ada). Memory budget, computed from the
+# actual LoRA parameter count of 189M:
 #
-# Expected shape on 28.7M tokens:
+#   4-bit base weights (nf4 + double quant)  ~5.4 GB
+#   LoRA adapters, 189M x 2 bytes             0.38 GB
+#   gradients,     189M x 2 bytes             0.38 GB
+#   AdamW states,  189M x 8 bytes             1.51 GB
+#   activations, checkpointed, seq 2048 bs 1  ~2.5-4.0 GB
+#   CUDA context + fragmentation              ~1.5 GB
+#   -----------------------------------------------------
+#   peak                                      ~11.7-13.2 GB
+#   headroom on 24 GB                         ~10.8 GB
+#
+# The headroom is deliberate and NOT wasted capacity to be reclaimed blindly.
+# per_device_batch_size 2 would very likely fit and improve GPU utilisation,
+# but that has not been measured on this hardware, so it is not the shipped
+# default. To try it, halve gradient_accumulation_steps to 8 so tokens/step
+# stays at 32,768, and watch `nvidia-smi` on the first 20 steps.
+#
+# Expected shape on 28.7M measured tokens:
 #   tokens/step = 1 x 16 x 2048 = 32,768
 #   steps/epoch = 28.7M / 32,768 = ~875
 #   2 epochs    = ~1,750 optimiser steps
 #
-# Check before launching, and never guess:
-#   qm train plan --config configs/cpt/qwen3_8b_qlora_24gb.yaml
+# Before launching:
+#   qm train preflight --config configs/cpt/qwen3_8b_qlora_24gb.yaml
+#   qm train plan      --config configs/cpt/qwen3_8b_qlora_24gb.yaml
 
 _base_: base.yaml
 
@@ -31,6 +43,11 @@ runtime:
   gradient_accumulation_steps: 16
   gradient_checkpointing: true
   bf16: true
+  # RTX 4090 is sm_89, so bf16 is native and fp16 loss scaling is unnecessary.
+  fp16: false
+  # Resume automatically after a pod reclaim. On an interruptible cloud GPU a
+  # restart that silently began at step 0 would waste the whole run.
+  resume_from_checkpoint: auto
 
 logging:
   run_name: qwen3-8b-kaa-cpt-qlora24

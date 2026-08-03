@@ -93,6 +93,10 @@ runtime:
   fp16: false
   tf32: true
   seed: 20260731
+  # auto | never | checkpoint-<step>. `auto` continues from the newest
+  # checkpoint in output_dir if one exists - the right default on an
+  # interruptible cloud GPU.
+  resume_from_checkpoint: auto
 
 logging:
   output_dir: models/cpt

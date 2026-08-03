@@ -4,7 +4,9 @@ An open-source Large Language Model stack for the **Karakalpak** language (*qara
 
 Base model: **Qwen3-8B** → Continued Pretraining → SFT → DPO → RAG → vLLM serving → Next.js chat UI.
 
-> **Status:** Phase 1 complete, Phase 2 in progress. See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** Phases 1–7 complete (data → CPT → SFT → DPO), deployment-ready for a
+> single RTX 4090. See [docs/ROADMAP.md](docs/ROADMAP.md) and
+> [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). No training run has been executed yet.
 >
 > **Corpus: 286,434 unique documents / 66.0 M characters / 28.7 M Qwen3 tokens**
 > (`pretrain_v1`), measured end to end by running the pipeline — crawl, clean, dedup —
@@ -111,8 +113,8 @@ QaraqalpaqMind/
 
 ## Quick start
 
-**Python 3.12 is required, not 3.13+** — torch, vLLM, flash-attn and DeepSpeed publish
-wheels for 3.12 first, and newer interpreters force source builds against CUDA.
+**Python 3.12 or 3.13.** 3.12 is a hard floor: `common/config.py` uses PEP 695
+generics, which 3.11 cannot parse. 3.13 works — torch has supported it since 2.5.
 
 ```bash
 # 1. Toolchain. uv installs its own private 3.12 and never touches your system Python.
@@ -148,7 +150,9 @@ pip install -e ".[dev,crawl,ingest]"
 | `.[crawl]` | 2 | httpx, trafilatura, selectolax, pypdf |
 | `.[ingest]` | 2 | datasets, huggingface-hub, mwparserfromhell |
 | `.[clean]` | 3 | datasketch, ftfy, fasttext |
-| `.[train]` | 5 | torch, transformers, trl, peft, deepspeed (Linux + CUDA) |
+| `.[train]` | 5 | torch, transformers, trl, peft, accelerate, bitsandbytes (Linux + CUDA) |
+| `.[flash]` | 5 | flash-attn — optional, compiles from source, see [DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+| `.[distributed]` | 5 | deepspeed — multi-GPU only |
 | `.[rag]` | 9 | qdrant-client, sentence-tdoransformers |
 | `.[serve]` | 10 | vllm, fastapi, uvicorn |
 
@@ -180,6 +184,22 @@ are reviewed in a diff rather than improvised inside a scraper. `respect_robots`
 every source and a unit test enforces it.
 
 ---
+
+## Training on a GPU
+
+`data/` is not in git, so a fresh clone has no corpus. See
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for the full RunPod guide; the short
+version:
+
+```bash
+bash scripts/runpod_setup.sh            # install, caches, preflight
+qm ingest pull <you>/qaraqalpaqmind-data   # or rebuild: qm ingest all --bulk-only
+qm train preflight --config configs/cpt/qwen3_8b_qlora_24gb.yaml
+qm train cpt       --config configs/cpt/qwen3_8b_qlora_24gb.yaml
+```
+
+Verified for a single **RTX 4090 (24 GB)**: peak ~13 GB, ~10.8 GB headroom,
+~1,750 steps, ~6–10 h. Runs resume automatically after a pod reclaim.
 
 ## Roadmap
 

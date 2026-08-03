@@ -26,6 +26,7 @@ from ...common.io import read_jsonl
 from ...common.logging import get_logger
 from ...common.paths import PROJECT_ROOT, SFT_DIR
 from ...schemas import parse_record
+from ..checkpoints import resolve_resume
 from ..config import TuningMethod
 from .config import SFTConfig
 
@@ -227,7 +228,8 @@ def run(config: SFTConfig) -> Path:
 
     model = load_model(config)
     trainer = build_trainer(config, model, tokenizer, train_set, eval_set)
-    trainer.train()
+    resume = resolve_resume(config.runtime.resume_from_checkpoint, Path(trainer.args.output_dir))
+    trainer.train(resume_from_checkpoint=resume)
 
     output_dir = Path(trainer.args.output_dir)
     trainer.save_model(str(output_dir))
