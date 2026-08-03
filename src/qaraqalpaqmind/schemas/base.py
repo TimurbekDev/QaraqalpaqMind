@@ -37,6 +37,7 @@ class TaskType(StrEnum):
     CODING = "coding"
     MATH = "math"
     BENCHMARK = "benchmark"
+    PREFERENCE = "preference"
 
 
 class Provenance(BaseModel):

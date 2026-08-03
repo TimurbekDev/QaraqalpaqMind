@@ -18,6 +18,7 @@ from .tasks import (
     GrammarRecord,
     InstructionRecord,
     MathRecord,
+    PreferenceRecord,
     PretrainRecord,
     QARecord,
     ReasoningRecord,
@@ -164,6 +165,25 @@ BENCHMARK_FREE_FORM = BenchmarkRecord(
 )
 
 
+PREFERENCE = PreferenceRecord(
+    # The cleanest kind of preference pair: both sides say exactly the same
+    # thing, so language is the only dimension they differ in. Anything else
+    # they differed in would also be taught.
+    prompt=(
+        "Tómendegi mazmundı qaraqalpaq tilinde jazıp ber:\n\n"
+        "The capital of the Republic of Karakalpakstan is the city of Nukus."
+    ),
+    chosen="Qaraqalpaqstan Respublikasınıń paytaxtı — Nókis qalası.",
+    rejected="The capital of the Republic of Karakalpakstan is the city of Nukus.",
+    criterion="language_consistency",
+    provenance=Provenance(
+        source_id="hf_dilmash_parallel",
+        source_url="https://huggingface.co/datasets/tahrirchi/dilmash",
+        license="MIT",
+    ),
+)
+
+
 EXAMPLES: dict[TaskType, TaskRecord] = {
     TaskType.PRETRAIN: PRETRAIN,
     TaskType.INSTRUCTION: INSTRUCTION,
@@ -176,6 +196,7 @@ EXAMPLES: dict[TaskType, TaskRecord] = {
     TaskType.CODING: CODING,
     TaskType.MATH: MATH,
     TaskType.BENCHMARK: BENCHMARK_MULTIPLE_CHOICE,
+    TaskType.PREFERENCE: PREFERENCE,
 }
 
 ALL_EXAMPLES: list[TaskRecord] = [
@@ -192,4 +213,5 @@ ALL_EXAMPLES: list[TaskRecord] = [
     MATH,
     BENCHMARK_MULTIPLE_CHOICE,
     BENCHMARK_FREE_FORM,
+    PREFERENCE,
 ]

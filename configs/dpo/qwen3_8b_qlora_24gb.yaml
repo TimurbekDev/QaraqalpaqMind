@@ -1,0 +1,85 @@
+# DPO on top of the Phase 6 SFT adapter, one 24GB card.
+#
+#   qm dpo build
+#   qm train dpo --config configs/dpo/qwen3_8b_qlora_24gb.yaml
+#
+# With LoRA the reference model is this same model with adapters disabled, so
+# the weights are not loaded twice. That is what makes DPO fit on one card.
+
+method: qlora
+sft_adapter: models/sft/qlora_24gb
+dataset: dpo_v1
+
+# How far the policy may drift from the reference. Low values allow large
+# drift and, on a small preference set, reward hacking - the model finds a
+# degenerate output that scores well and collapses onto it. Raise it if
+# outputs degrade.
+beta: 0.1
+loss_type: sigmoid
+
+max_length: 1024
+max_prompt_length: 512
+
+model:
+  name: Qwen/Qwen3-8B
+  revision: null
+  attn_implementation: sdpa
+  torch_dtype: bfloat16
+  use_cache: false
+
+quantization:
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_compute_dtype: bfloat16
+
+lora:
+  # Smaller again than SFT's 32. DPO is a refinement pass; a large adapter
+  # here mostly increases the room available to over-optimise.
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  modules_to_save: []
+
+optim:
+  # An order of magnitude below SFT. The validator rejects anything above 1e-5:
+  # DPO refines a working model, and a large rate erases the
+  # instruction-following that SFT installed.
+  learning_rate: 5.0e-6
+  optimizer: adamw_torch_fused
+  weight_decay: 0.0
+  adam_beta2: 0.95
+  max_grad_norm: 1.0
+  lr_scheduler: cosine
+  warmup_ratio: 0.1
+  min_lr_ratio: 0.1
+
+runtime:
+  # One epoch. Preference training degrades quickly past this; the validator
+  # rejects more than three.
+  num_epochs: 1.0
+  max_steps: null
+  per_device_batch_size: 1
+  # DPO holds four sequences in memory per example (chosen and rejected, policy
+  # and reference), so the micro-batch is smaller than SFT's.
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true
+  bf16: true
+  fp16: false
+  tf32: true
+  seed: 20260731
+
+logging:
+  output_dir: models/dpo/qlora_24gb
+  run_name: qwen3-8b-kaa-dpo-qlora24
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 100
+  save_total_limit: 3
+  report_to: [wandb]
+  wandb_project: qaraqalpaqmind
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false

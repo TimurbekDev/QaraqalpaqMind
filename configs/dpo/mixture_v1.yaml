@@ -1,0 +1,30 @@
+# How the preference dataset is assembled.
+#
+#   qm dpo build     assemble into data/datasets/dpo/
+#   qm dpo inspect   check what the pairs actually teach
+#
+# Orthography and language consistency dominate because their pairs are the
+# cleanest available: both sides say the same thing and differ in exactly one
+# dimension. That precision matters more in DPO than in SFT, because DPO
+# teaches every dimension the two sides differ in, including unintended ones.
+
+name: dpo_v1
+target_size: 20000
+validation_split: 0.02
+seed: 20260731
+check_contamination: true
+
+proportions:
+  # Karakalpak answer preferred over its own Russian/English translation.
+  # The two are translations of each other, so language is the only difference.
+  language_consistency: 0.40
+  # Correct spelling preferred over the 2009/1994/stripped conventions.
+  # Generated from the same sentence, so nothing else can differ.
+  orthography: 0.40
+  # Kept corpus text preferred over text the cleaner rejected. Weaker signal:
+  # the two sides are different documents, so they differ in content too.
+  response_quality: 0.20
+
+max_orthography: 15000
+max_language: 15000
+max_quality: 5000

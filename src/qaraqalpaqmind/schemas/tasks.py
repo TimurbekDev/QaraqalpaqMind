@@ -258,6 +258,55 @@ class BenchmarkRecord(TaskRecord):
                 {"role": "assistant", "content": self.answer}]
 
 
+class PreferenceRecord(TaskRecord):
+    """A preference pair for direct preference optimisation.
+
+    `chosen` and `rejected` are two responses to the same prompt. DPO raises the
+    model's likelihood of the first relative to the second, so what matters is
+    that the pair differ in exactly the dimension being taught - anything else
+    they differ in is also being taught, silently.
+
+    `criterion` names that dimension, so a mixture can be audited and a
+    regression traced back to the preference that caused it.
+    """
+
+    task: Literal[TaskType.PREFERENCE] = TaskType.PREFERENCE
+    prompt: str = Field(min_length=1)
+    chosen: str = Field(min_length=1)
+    rejected: str = Field(min_length=1)
+    criterion: str = Field(
+        min_length=1,
+        description="What the pair teaches: orthography, language_consistency, quality, ...",
+    )
+    system: str = ""
+
+    @model_validator(mode="after")
+    def _sides_must_differ(self) -> PreferenceRecord:
+        if self.chosen.strip() == self.rejected.strip():
+            raise ValueError("chosen and rejected are identical; the pair teaches nothing")
+        return self
+
+    def to_messages(self) -> list[dict[str, str]]:
+        """Prompt plus the preferred response, for length and contamination checks."""
+        return [
+            system_prompt(self.system or None),
+            {"role": "user", "content": self.prompt},
+            {"role": "assistant", "content": self.chosen},
+        ]
+
+    def to_dpo_row(self) -> dict[str, list[dict[str, str]]]:
+        """The conversational format TRL's DPOTrainer expects."""
+        prompt = [
+            system_prompt(self.system or None),
+            {"role": "user", "content": self.prompt},
+        ]
+        return {
+            "prompt": prompt,
+            "chosen": [{"role": "assistant", "content": self.chosen}],
+            "rejected": [{"role": "assistant", "content": self.rejected}],
+        }
+
+
 RECORD_TYPES: dict[TaskType, type[TaskRecord]] = {
     TaskType.PRETRAIN: PretrainRecord,
     TaskType.INSTRUCTION: InstructionRecord,
@@ -270,6 +319,7 @@ RECORD_TYPES: dict[TaskType, type[TaskRecord]] = {
     TaskType.CODING: CodingRecord,
     TaskType.MATH: MathRecord,
     TaskType.BENCHMARK: BenchmarkRecord,
+    TaskType.PREFERENCE: PreferenceRecord,
 }
 
 

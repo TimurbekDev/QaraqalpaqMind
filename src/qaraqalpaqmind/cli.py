@@ -147,6 +147,13 @@ def _register_groups() -> None:
     except ImportError as exc:
         logger.debug("sft group unavailable", extra={"error": str(exc)})
 
+    try:
+        from .training.dpo.cli import app as dpo_app
+
+        app.add_typer(dpo_app, name="dpo")
+    except ImportError as exc:
+        logger.debug("dpo group unavailable", extra={"error": str(exc)})
+
 
 _register_groups()
 

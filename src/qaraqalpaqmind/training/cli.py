@@ -192,6 +192,30 @@ def sft(
     console.print(f"[green]Done.[/] Adapter written to {output}")
 
 
+@app.command()
+def dpo(
+    config_path: str = typer.Option("dpo/qwen3_8b_qlora_24gb.yaml", "--config", "-c"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate the config and stop."),
+) -> None:
+    """Run direct preference optimisation on top of the SFT adapter."""
+    from .dpo.config import DPOConfig
+
+    config = load_config(config_path, DPOConfig)
+
+    if dry_run:
+        console.print(f"[green]Config valid[/]: {config_path}")
+        console.print(
+            f"  beta={config.beta} lr={config.optim.learning_rate:g} "
+            f"sft_adapter={config.sft_adapter}"
+        )
+        return
+
+    from .dpo.train import run as run_dpo
+
+    output = run_dpo(config)
+    console.print(f"[green]Done.[/] Adapter written to {output}")
+
+
 @app.command("configs")
 def list_configs() -> None:
     """Show the available training configurations."""
