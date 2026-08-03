@@ -1,0 +1,211 @@
+"""Guards on the serving stack's configuration (Phase 10b).
+
+These parse the deployment files rather than running Docker, so they are fast
+and run everywhere. Every assertion corresponds to something that was actually
+wrong while building the stack, or to a property whose loss is silent: a
+published port, a buffered stream, a container that reports healthy while being
+unreachable.
+"""
+
+from __future__ import annotations
+
+import yaml
+
+from qaraqalpaqmind.common.paths import PROJECT_ROOT
+
+DEPLOYMENT = PROJECT_ROOT / "deployment"
+COMPOSE = DEPLOYMENT / "docker-compose.yml"
+DOCKERFILE = DEPLOYMENT / "Dockerfile.api"
+SITE_CONF = DEPLOYMENT / "nginx" / "conf.d" / "qaraqalpaqmind.conf"
+
+
+def _compose() -> dict:
+    return yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+
+
+def _dockerfile() -> str:
+    return DOCKERFILE.read_text(encoding="utf-8")
+
+
+def _healthcheck_line() -> str:
+    """The CMD line of the HEALTHCHECK, not the comment block explaining it.
+
+    The comment above it discusses curl, healthchecks and localhost, so a
+    naive substring search finds the prose first and the test passes or fails
+    on documentation rather than on the directive.
+    """
+    return next(
+        line
+        for line in _dockerfile().splitlines()
+        if not line.lstrip().startswith("#")
+        and line.lstrip().startswith("CMD ")
+        and "curl" in line
+    )
+
+
+# --- compose --------------------------------------------------------------
+
+
+def test_the_gateway_is_not_published_to_the_host() -> None:
+    # `expose` is internal to the network; `ports` opens a path around nginx,
+    # and with it TLS and edge rate limiting.
+    api = _compose()["services"]["api"]
+    assert "ports" not in api
+    assert api["expose"] == ["8000"]
+
+
+def test_vllm_is_not_published_to_the_host() -> None:
+    # vLLM has no authentication of its own. Anything that reaches it can use
+    # the GPU.
+    assert "ports" not in _compose()["services"]["vllm"]
+
+
+def test_missing_api_keys_fails_the_stack_rather_than_opening_it() -> None:
+    # The `:?` form makes compose refuse to start. Without it the gateway comes
+    # up with auth on and no keys, refusing every request - which presents as a
+    # broken deployment rather than a missing .env.
+    env = _compose()["services"]["api"]["environment"]
+    assert env["QM_API_KEYS"].startswith("${QM_API_KEYS:?")
+
+
+def test_no_secret_is_written_into_the_compose_file() -> None:
+    for line in COMPOSE.read_text(encoding="utf-8").splitlines():
+        if "QM_API_KEYS" in line:
+            # Every mention must be a variable reference or a comment.
+            assert "${" in line or line.lstrip().startswith("#"), line
+
+
+def test_the_gpu_service_is_behind_a_profile() -> None:
+    # Otherwise `docker compose up` fails on a machine with no NVIDIA runtime,
+    # for a service the user did not ask for.
+    assert _compose()["services"]["vllm"]["profiles"] == ["gpu"]
+
+
+def test_the_gateway_does_not_hard_depend_on_the_gpu_service() -> None:
+    # `required: false` lets the profiled service be absent. Without it compose
+    # errors with "depends on undefined service vllm" whenever gpu is off.
+    assert _compose()["services"]["api"]["depends_on"]["vllm"]["required"] is False
+
+
+def test_the_gateway_binds_all_interfaces_in_the_container() -> None:
+    # configs/serve/dev.yaml binds 127.0.0.1 - right on a laptop, unreachable
+    # from nginx. The override makes any serve config work in a container.
+    command = _compose()["services"]["api"]["command"]
+    assert command[command.index("--host") + 1] == "0.0.0.0"
+
+
+def test_vllm_mounts_the_weights_read_only() -> None:
+    volumes = _compose()["services"]["vllm"]["volumes"]
+    weights = [v for v in volumes if v.startswith("../models")]
+    assert weights and all(v.endswith(":ro") for v in weights)
+
+
+# --- Dockerfile -----------------------------------------------------------
+
+
+def test_the_image_runs_as_a_non_root_user() -> None:
+    users = [line.split()[1] for line in _dockerfile().splitlines() if line.startswith("USER ")]
+    assert users and users[-1] != "root"
+
+
+def test_the_project_root_is_set_explicitly() -> None:
+    # paths.py needs a directory holding BOTH pyproject.toml and configs/. The
+    # image has only configs/, so without this every --config resolves under
+    # site-packages and fails.
+    assert "QM_PROJECT_ROOT=/app" in _dockerfile()
+
+
+def test_the_healthcheck_does_not_use_loopback() -> None:
+    # A config binding 127.0.0.1 is reachable on loopback and unreachable from
+    # every other container. A localhost healthcheck passes in exactly that
+    # case, so the container reports healthy and nginx 502s against it.
+    line = _healthcheck_line()
+    assert "$(hostname)" in line
+    assert "localhost" not in line
+
+
+def test_the_healthcheck_uses_liveness_not_readiness() -> None:
+    # /readyz is 503 while vLLM loads. Restarting the gateway for that turns a
+    # slow model load into a crash loop.
+    line = _healthcheck_line()
+    assert "/healthz" in line and "/readyz" not in line
+
+
+def test_the_gateway_installs_only_the_serve_extra() -> None:
+    # torch would add ~7 GB and minutes to every restart, for code that never
+    # runs: the GPU work happens in the vLLM container.
+    installs = [line for line in _dockerfile().splitlines() if "pip install" in line]
+    assert any('".[serve]"' in line for line in installs)
+    assert not any("[train]" in line or "[vllm]" in line for line in installs)
+
+
+# --- nginx ----------------------------------------------------------------
+
+
+def _v1_block() -> str:
+    return SITE_CONF.read_text(encoding="utf-8").split("location /v1/")[1].split("\n    }")[0]
+
+
+def test_streaming_is_not_buffered() -> None:
+    # With buffering on, a token stream arrives in one lump when generation
+    # finishes. The response is correct, so this presents as broken frontend
+    # code rather than as a proxy setting.
+    block = _v1_block()
+    assert "proxy_buffering off" in block
+    assert "proxy_cache off" in block
+    # HTTP/1.0 has no chunked encoding, so a response of unknown length cannot
+    # stream at all.
+    assert "proxy_http_version 1.1" in block
+
+
+def test_streaming_timeouts_outlast_a_long_generation() -> None:
+    # nginx's default proxy_read_timeout is 60s, which truncates a long answer.
+    read_timeout = _v1_block().split("proxy_read_timeout")[1].split(";")[0].strip()
+    assert int(read_timeout.rstrip("s")) >= 300
+
+
+def test_metrics_are_not_public() -> None:
+    text = SITE_CONF.read_text(encoding="utf-8")
+    assert "deny all" in text.split("location = /metrics")[1].split("}")[0]
+
+
+def test_upstream_is_re_resolved() -> None:
+    # nginx caches a resolved upstream address for the life of the process. A
+    # restarted api container on a new IP then 502s until nginx restarts, with
+    # the gateway sitting there healthy.
+    text = SITE_CONF.read_text(encoding="utf-8")
+    assert "resolver 127.0.0.11" in text
+    assert "proxy_pass http://$qm_api;" in text
+    # An `upstream` block would resolve once and cache again, defeating the
+    # above. Check for the directive, not the word - the comments discuss it.
+    directives = [line.strip() for line in text.splitlines() if not line.lstrip().startswith("#")]
+    assert not any(line.startswith("upstream ") for line in directives)
+
+
+def test_tls_block_is_commented_out_until_certificates_exist() -> None:
+    # nginx refuses to start when ssl_certificate points at a missing file, so
+    # an active block would mean the stack cannot run at all before certbot.
+    for line in SITE_CONF.read_text(encoding="utf-8").splitlines():
+        if "ssl_certificate" in line:
+            assert line.lstrip().startswith("#"), line
+
+
+# --- build context --------------------------------------------------------
+
+
+def _dockerignore() -> list[str]:
+    return (PROJECT_ROOT / ".dockerignore").read_text(encoding="utf-8").split()
+
+
+def test_the_corpus_and_checkpoints_stay_out_of_the_build_context() -> None:
+    # The daemon receives the whole context before the first instruction runs.
+    # data/ alone is 449 MB and nothing COPYs it.
+    for path in ("data/", "models/", ".git/", ".venv/"):
+        assert path in _dockerignore()
+
+
+def test_secrets_stay_out_of_the_build_context() -> None:
+    # Anything in the context can be read by a later instruction and baked into
+    # a layer, whether or not the Dockerfile currently copies it.
+    for path in (".env", "*.pem", "*.key", "deployment/nginx/certs/"):
+        assert path in _dockerignore()

@@ -1,0 +1,3 @@
+# Certificates go here. Never commit them.
+*
+!.gitignore

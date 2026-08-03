@@ -1,0 +1,98 @@
+# The API gateway. Deliberately has no CUDA, no torch, and no model weights.
+#
+# The gateway's job is auth, rate limiting, request validation and SSE
+# forwarding. The GPU work happens in the vLLM container. Keeping them apart is
+# what makes the gateway restart in a second - an image with torch in it is
+# ~7 GB and a process holding 16 GB of weights takes a minute to come back, so
+# a coupled design would make every auth or rate-limit change cost a model
+# reload.
+#
+# Build from the REPOSITORY ROOT, not from this directory:
+#     docker build -f deployment/Dockerfile.api -t qaraqalpaqmind-api .
+
+FROM python:3.12-slim-bookworm AS builder
+
+# Byte-compile nothing in the builder and never write a pip cache into a layer
+# that gets copied forward.
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /build
+
+# A virtualenv rather than a --user install: it is one self-contained directory
+# to copy into the runtime stage, so the runtime image never sees pip at all.
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Dependencies before source. Editing a route then rebuilds only the last
+# layer instead of reinstalling fastapi and its tree every time.
+COPY pyproject.toml README.md ./
+COPY src/qaraqalpaqmind/__init__.py src/qaraqalpaqmind/__init__.py
+RUN pip install --no-cache-dir ".[serve]"
+
+COPY src/ src/
+# --no-deps: everything is already resolved above, and this must not silently
+# pull a different version of anything at image-build time.
+RUN pip install --no-cache-dir --no-deps .
+
+
+FROM python:3.12-slim-bookworm AS runtime
+
+# curl is for the healthcheck below. Without it HEALTHCHECK has nothing to run
+# and the container reports "starting" forever, which compose treats as unhealthy.
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root. The gateway needs no privileged operation, and a container that
+# runs as root shares that root with anything that escapes the process.
+RUN useradd --create-home --uid 10001 qm
+
+COPY --from=builder /opt/venv /opt/venv
+
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    QM_LOG_JSON=true \
+    # Required, not decorative. `paths.py` finds the project root by looking
+    # for a directory holding BOTH pyproject.toml and configs/. This image is
+    # an installed package, not a checkout: it has configs/ and no
+    # pyproject.toml, so root detection would fall through to site-packages and
+    # `--config serve/production.yaml` would resolve to a path that does not
+    # exist. The explicit override is checked first and skips all of that.
+    QM_PROJECT_ROOT=/app
+
+WORKDIR /app
+
+# Configs are copied, not mounted, so the image is a complete description of
+# what it serves. Mount over /app/configs to override without rebuilding.
+COPY --chown=qm:qm configs/serve/ /app/configs/serve/
+
+# `setup_logging()` always attaches a RotatingFileHandler at $QM_LOGS_DIR, with
+# no way to turn it off, and it runs at import time - so without a writable
+# directory here the container dies on `import qaraqalpaqmind` with a
+# PermissionError, before any config is read. Bounded at 64 MB x 5 by the
+# handler's own rotation. Mount a volume over it to keep the logs.
+RUN mkdir -p /app/logs && chown qm:qm /app/logs
+
+USER qm
+EXPOSE 8000
+
+# Liveness only. Readiness depends on vLLM being up, and a container that
+# restarts itself because its *dependency* is down turns one outage into a
+# crash loop.
+#
+# Against $(hostname), NOT localhost. A config binding 127.0.0.1 - which
+# configs/serve/dev.yaml does, correctly, for laptop use - is reachable on
+# loopback and unreachable from every other container. A healthcheck curling
+# localhost passes in exactly that situation, so the container reports healthy,
+# compose starts nginx against it, and every request is a 502. Checking the
+# routable interface makes a bad bind fail the healthcheck instead.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl --fail --silent "http://$(hostname):8000/healthz" || exit 1
+
+# No API keys here. They arrive from the environment at run time - baking a
+# secret into an image publishes it to everyone who can pull the image.
+ENTRYPOINT ["qm", "serve"]
+CMD ["--config", "serve/production.yaml"]

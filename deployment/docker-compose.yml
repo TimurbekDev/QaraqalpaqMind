@@ -1,0 +1,123 @@
+# The serving stack: nginx -> gateway -> vLLM.
+#
+#   cd deployment
+#   cp .env.example .env        # then put real keys in it
+#   docker compose up -d        # gateway + nginx, echo backend, no GPU needed
+#   docker compose --profile gpu up -d    # adds vLLM, needs an NVIDIA GPU
+#
+# The GPU service sits behind a profile so that `docker compose up` works on a
+# laptop. Without it, anyone without an NVIDIA runtime gets a failure on a
+# service they did not want, and the usual response is to delete the service
+# from the file.
+
+name: qaraqalpaqmind
+
+services:
+  api:
+    build:
+      # The repository root, not this directory: the Dockerfile copies src/ and
+      # pyproject.toml, which are above here.
+      context: ..
+      dockerfile: deployment/Dockerfile.api
+    image: qaraqalpaqmind-api:latest
+    restart: unless-stopped
+    environment:
+      # Read from the shell or deployment/.env. Never written in this file -
+      # compose files get committed and secrets must not travel with them.
+      QM_API_KEYS: ${QM_API_KEYS:?set QM_API_KEYS in deployment/.env, or every request will be refused}
+      QM_LOG_LEVEL: ${QM_LOG_LEVEL:-INFO}
+      QM_LOG_JSON: "true"
+    # Not published to the host. nginx is the only way in, so the gateway
+    # cannot be reached on :8000 around the TLS termination and rate limiting.
+    expose:
+      - "8000"
+    command:
+      - --config
+      - ${QM_SERVE_CONFIG:-serve/production.yaml}
+      # Overrides whatever the config says, so any serve config works here.
+      # dev.yaml binds 127.0.0.1 - right on a laptop, unreachable from nginx in
+      # a container. Binding all interfaces inside a container is not the same
+      # exposure as on a host: the port is never published, so the only thing
+      # that can reach it is another service on this network.
+      - --host
+      - 0.0.0.0
+    networks:
+      - qm
+    depends_on:
+      # Only a start-order hint. vLLM takes minutes to load 16 GB of weights and
+      # the gateway must come up without it: /readyz reports 503 until the
+      # backend answers, which is the honest state, whereas blocking startup
+      # would make a slow model load look like a broken gateway.
+      vllm:
+        condition: service_started
+        required: false
+
+  vllm:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:v0.7.3
+    restart: unless-stopped
+    # Read-only: the server loads weights and must never write to the directory
+    # that holds them.
+    volumes:
+      - ../models/merged:/models:ro
+      - vllm-cache:/root/.cache/huggingface
+    command:
+      - --model
+      - /models/qwen3-8b-kaa
+      # The name clients send. Decoupled from the path on purpose, so replacing
+      # the checkpoint does not change the API contract.
+      - --served-model-name
+      - qaraqalpaqmind
+      - --port
+      - "8001"
+      - --max-model-len
+      - "4096"
+      # 0.90 not 0.95: vLLM preallocates this share of VRAM for weights and KV
+      # cache, and the remainder still has to hold CUDA context and activation
+      # peaks. Too high fails at load, which looks like an unrelated crash.
+      - --gpu-memory-utilization
+      - "0.90"
+    expose:
+      - "8001"
+    # Loading 16 GB from disk takes minutes. start_period covers that, so the
+    # container is not declared unhealthy and restarted before it finishes -
+    # which would loop forever.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    ipc: host  # vLLM's workers use shared memory; the default 64 MB is too small
+    networks:
+      - qm
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${QM_HTTP_PORT:-80}:80"
+      - "${QM_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - qm
+
+networks:
+  qm:
+    driver: bridge
+
+volumes:
+  vllm-cache:
