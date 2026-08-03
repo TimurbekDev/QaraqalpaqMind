@@ -17,6 +17,11 @@ export const kaa = {
   placeholder: "Xabarıńızdı jazıń...",
   send: "Jiberiw",
   stop: "Toqtatıw",
+  regenerate: "Qaytadan juwap ber",
+  retry: "Qaytadan urınıw",
+  copy: "Kóshiriw",
+  copied: "Kóshirildi",
+  scrollToLatest: "Eń jańasına ótiw",
 
   emptyTitle: "Sálem!",
   emptyBody: "Qaraqalpaq tilinde sorawıńızdı jazıń.",
@@ -29,13 +34,34 @@ export const kaa = {
   errorUnreachable: "Server menen baylanıs joq.",
   errorRateLimited: "Júdá kóp soraw. Biraz kútiń.",
 
+  theme: "Kórinis",
+  themeSystem: "Sistema",
+  themeLight: "Jaqtı",
+  themeDark: "Qarańǵı",
+
   /** Shown once, under the composer. */
   disclaimer: "Model qátelesiwi múmkin. Áhmiyetli maǵlıwmatlardı tekseriń.",
+
+  /** Screen-reader only, announced when a reply starts arriving. */
+  srGenerating: "Juwap jazılıp atır",
 } as const;
 
 /** Suggested opening prompts, shown on the empty state. */
-export const suggestions: readonly string[] = [
-  "Qaraqalpaqstan haqqında aytıp ber",
-  "Ámiwdárya qayerden baslanadı?",
-  "Qaraqalpaq tilinde qısqa gúrriń jaz",
+export const suggestions: readonly { title: string; prompt: string }[] = [
+  {
+    title: "Qaraqalpaqstan",
+    prompt: "Qaraqalpaqstan haqqında qısqasha aytıp ber",
+  },
+  {
+    title: "Ámiwdárya",
+    prompt: "Ámiwdárya qayerden baslanıp, qayerge quyadı?",
+  },
+  {
+    title: "Gúrriń",
+    prompt: "Qaraqalpaq tilinde qısqa gúrriń jaz",
+  },
+  {
+    title: "Awdarma",
+    prompt: "«Kitap oqıw paydalı» degen sózdi orıs tiline awdar",
+  },
 ];

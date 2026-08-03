@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
-@theme {
+/* Dark styling is driven by data-theme on <html>, not only by the media query,
+   so an explicit choice can override the OS. `variant` rather than the default
+   media strategy is what makes Tailwind's `dark:` utilities agree with the
+   custom properties below. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
   --color-surface: #ffffff;
   --color-surface-muted: #f6f7f9;
   --color-ink: #10131a;
@@ -9,8 +15,10 @@
   --color-line: #e3e6ea;
 }
 
+/* The OS preference applies only when no explicit choice has been stored.
+   :not([data-theme]) is what keeps "light" from being overridden at sunset. */
 @media (prefers-color-scheme: dark) {
-  @theme {
+  :root:not([data-theme]) {
     --color-surface: #0f1116;
     --color-surface-muted: #171a21;
     --color-ink: #e8eaed;
@@ -18,6 +26,15 @@
     --color-accent: #4f8cf7;
     --color-line: #262b34;
   }
+}
+
+[data-theme="dark"] {
+  --color-surface: #0f1116;
+  --color-surface-muted: #171a21;
+  --color-ink: #e8eaed;
+  --color-ink-muted: #9aa3b2;
+  --color-accent: #4f8cf7;
+  --color-line: #262b34;
 }
 
 html,
@@ -33,24 +50,60 @@ body {
      meaning. System stacks have full Latin Extended-A coverage. */
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* The theme changes the page background; without this the browser paints the
+     overscroll area in the old colour. */
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* The caret should sit at the end of streaming text, not on its own line. */
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Keyboard focus stays visible; mouse focus does not draw a ring. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* --- Streaming affordances ---------------------------------------------- */
+
 @keyframes caret {
   0%, 45% { opacity: 1; }
   50%, 95% { opacity: 0; }
   100% { opacity: 1; }
 }
 
-.streaming-caret::after {
+/* Sits at the end of the last block rather than on its own line. */
+.streaming-caret > :last-child::after {
   content: "▍";
-  margin-inline-start: 1px;
+  margin-inline-start: 2px;
   animation: caret 1s steps(1) infinite;
   color: var(--color-ink-muted);
 }
 
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+.typing-dot {
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+/* --- Scrollbars ---------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .streaming-caret::after {
+  .streaming-caret > :last-child::after,
+  .typing-dot {
     animation: none;
+  }
+  html {
+    scroll-behavior: auto;
   }
 }

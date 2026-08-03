@@ -80,7 +80,38 @@ returns the correct answer, delivered in one lump when generation finishes —
 which is indistinguishable from broken frontend code. Verified end to end
 through both proxies: chunks arrive ~75 ms apart.
 
-## 4. Interface details worth knowing
+## 4. What the interface does
+
+| Feature | Note |
+|---|---|
+| Conversation persistence | localStorage, validated on read. A reload losing everything is the worst thing a chat UI does, and mobile browsers evict background tabs constantly. Stays on the device — sending it anywhere would need a retention policy. |
+| Markdown rendering | Written here rather than pulled in: react-markdown + remark + rehype is ~100 kB for a feature set a chat bubble does not use, on a page whose whole bundle is 108 kB. Cost of the hand-rolled one: 3 kB. |
+| Copy button | On assistant messages and on every code block. |
+| Regenerate | Drops the last assistant turn and re-asks from the same history. |
+| Theme: system / light / dark | Stored, with an inline bootstrap script so there is no white flash before hydration for anyone who chose dark. |
+| Typing indicator | An empty bubble during time-to-first-token looks frozen; on a cold model that is seconds. |
+| Jump-to-latest | Appears only when scrolled away from the bottom. |
+| Character counter | Shows from 80% of the server's 32,000 limit, so hitting it is not a surprise. |
+| Focus return | The composer refocuses when a reply finishes. |
+
+### Markdown safety
+
+Everything builds React elements; nothing reaches `dangerouslySetInnerHTML`.
+This matters more than usual because model output is partly determined by
+whatever a user typed into it.
+
+Links are restricted to `http:` and `https:`. A model can emit `javascript:` or
+`data:` URLs — because it learned them, or because someone asked — and
+rendering one as a clickable anchor turns model output into script execution.
+Both render as inert text instead.
+
+Verified by server-rendering a page of cases and inspecting the HTML: headings,
+bold, italic, inline code, both list kinds, blockquote, fenced code with a
+language label, an **unterminated** fence (the common case mid-stream), a
+`https:` link with `rel="noopener noreferrer"`, and `javascript:`/`data:` links
+producing no anchor. 16/16.
+
+## 5. Interface details worth knowing
 
 | Thing | Why |
 |---|---|
@@ -92,7 +123,7 @@ through both proxies: chunks arrive ~75 ms apart.
 | Abort is not an error | Pressing stop keeps whatever streamed so far; only real failures render as errors. |
 | `AbortSignal` forwarded upstream | A cancelled generation stops occupying the GPU instead of running for a browser that has gone. |
 
-## 5. The strings need a native speaker
+## 6. The strings need a native speaker
 
 Every user-visible string is in `web/lib/strings.ts`, collected there so a
 native speaker can review the whole interface without reading React.
@@ -103,13 +134,13 @@ dotless `ı` are distinct letters, not decorated versions of `a o u g n i` — a
 well-meant "fix" to plain ASCII changes the words. A test asserts these
 characters are still present.
 
-## 6. Verified
+## 7. Verified
 
 Run against the stack, not asserted:
 
 | Check | Result |
 |---|---|
-| `npm run build` | clean, 105 kB first load |
+| `npm run build` | clean, 108 kB first load |
 | `npm run typecheck` | clean (`strict`, `noUncheckedIndexedAccess`) |
 | UI through nginx | 200, `lang="kaa"`, correct 2016 orthography |
 | CSS from the standalone image | 200 |
@@ -118,14 +149,15 @@ Run against the stack, not asserted:
 | Invalid body / role / content type | 400 with a reason |
 | `"model": "evil"` in the request | ignored; `qaraqalpaqmind` sent |
 | Web image size | 78 MB |
+| Markdown renderer, SSR'd | 16/16, incl. `javascript:`/`data:` rendering inert |
+| Theme, persistence, copy, regenerate | present in served HTML |
 
-## 7. Not done yet
+## 8. Not done yet
 
-- No markdown rendering; assistant output is plain text with preserved
-  whitespace. Fine until the model is trained to emit markdown.
-- No conversation persistence. Reloading the page clears the chat.
+- No syntax highlighting inside code blocks.
+- One conversation, not a list of them. Starting a new chat discards the old.
 - No `/api/chat` rate limit of its own — it relies on nginx per-IP limits and
   the gateway per-key limits. Since the UI holds one key, all visitors share
   that key's budget. Give the UI its own key and its own quota before opening
   it to the public.
-- The strings are unreviewed (§5).
+- The strings are unreviewed (§6).

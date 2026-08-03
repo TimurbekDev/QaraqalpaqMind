@@ -150,16 +150,27 @@ WEB = PROJECT_ROOT / "web"
 DOCKERFILE_WEB = DEPLOYMENT / "Dockerfile.web"
 
 
+def _code_lines(path) -> list[str]:
+    """Source lines with comments dropped.
+
+    The comments in these files name the exact anti-patterns being avoided, so
+    a plain substring search finds the explanation and fails on documentation
+    rather than on code.
+    """
+    return [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if not line.lstrip().startswith(("//", "*", "/*"))
+    ]
+
+
 def test_the_gateway_key_is_never_exposed_to_the_browser() -> None:
     sources = [*WEB.glob("**/*.ts"), *WEB.glob("**/*.tsx")]
     sources = [p for p in sources if "node_modules" not in p.parts and ".next" not in p.parts]
     assert sources, "no web sources found"
 
     for path in sources:
-        text = path.read_text(encoding="utf-8")
-        for line in text.splitlines():
-            if line.lstrip().startswith("*") or line.lstrip().startswith("//"):
-                continue  # the comments explain the rule; they are not violations
+        for line in _code_lines(path):
             assert "NEXT_PUBLIC_" not in line, f"{path.name}: {line.strip()}"
 
 
@@ -214,6 +225,30 @@ def test_the_web_healthcheck_does_not_use_loopback() -> None:
     )
     assert "hostname()" in line
     assert "127.0.0.1" not in line and "localhost" not in line
+
+
+def test_model_output_is_never_rendered_as_raw_html() -> None:
+    # The markdown renderer builds React elements. dangerouslySetInnerHTML
+    # anywhere near model output would turn a generated string into markup -
+    # and that string is partly determined by whatever a user typed in.
+    #
+    # layout.tsx is the one allowed use: a constant theme bootstrap script that
+    # must run before first paint, with no user input in it.
+    for path in (WEB / "components").glob("*.tsx"):
+        for line in _code_lines(path):
+            assert "dangerouslySetInnerHTML" not in line, f"{path.name}: {line.strip()}"
+
+
+def test_links_in_model_output_are_restricted_to_http() -> None:
+    # A model can emit `javascript:` or `data:` URLs, either because it learned
+    # them or because someone asked it to. Rendering one as a clickable anchor
+    # makes model output executable.
+    markdown = (WEB / "components" / "Markdown.tsx").read_text(encoding="utf-8")
+    assert '["http:", "https:"]' in markdown
+    assert "new URL(href)" in markdown
+    # An anchor that opens a new tab needs both, or the opened page can reach
+    # back through window.opener.
+    assert 'rel="noopener noreferrer"' in markdown
 
 
 def test_the_ui_declares_karakalpak() -> None:
