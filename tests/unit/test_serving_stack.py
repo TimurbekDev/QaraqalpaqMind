@@ -139,6 +139,98 @@ def test_the_gateway_installs_only_the_serve_extra() -> None:
     assert not any("[train]" in line or "[vllm]" in line for line in installs)
 
 
+# --- the web UI -----------------------------------------------------------
+#
+# The one property worth guarding here is that the gateway key stays on the
+# server. Next.js inlines any NEXT_PUBLIC_* variable into the browser bundle at
+# build time, so the mistake is a one-word rename away and is invisible until
+# someone opens devtools.
+
+WEB = PROJECT_ROOT / "web"
+DOCKERFILE_WEB = DEPLOYMENT / "Dockerfile.web"
+
+
+def test_the_gateway_key_is_never_exposed_to_the_browser() -> None:
+    sources = [*WEB.glob("**/*.ts"), *WEB.glob("**/*.tsx")]
+    sources = [p for p in sources if "node_modules" not in p.parts and ".next" not in p.parts]
+    assert sources, "no web sources found"
+
+    for path in sources:
+        text = path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if line.lstrip().startswith("*") or line.lstrip().startswith("//"):
+                continue  # the comments explain the rule; they are not violations
+            assert "NEXT_PUBLIC_" not in line, f"{path.name}: {line.strip()}"
+
+
+def test_the_key_is_read_only_in_a_server_route() -> None:
+    # A "use client" file reading process.env would be a build-time inline.
+    route = (WEB / "app" / "api" / "chat" / "route.ts").read_text(encoding="utf-8")
+    assert "QM_API_KEY" in route
+    assert '"use client"' not in route
+    assert 'runtime = "nodejs"' in route
+
+    for path in (WEB / "components").glob("*.tsx"):
+        text = path.read_text(encoding="utf-8")
+        assert "process.env" not in text, path.name
+
+
+def test_the_web_container_gets_a_single_key_not_the_list() -> None:
+    # QM_API_KEYS is comma-separated. Passing it straight through would send
+    # `Authorization: Bearer key-one,key-two` as soon as a second key existed,
+    # and every request would 401 with nothing pointing at the comma.
+    env = _compose()["services"]["web"]["environment"]
+    assert env["QM_API_KEY"].startswith("${QM_WEB_API_KEY:?")
+
+
+def test_the_web_container_is_not_published_to_the_host() -> None:
+    web = _compose()["services"]["web"]
+    assert "ports" not in web
+    assert web["expose"] == ["3000"]
+
+
+def test_the_web_image_copies_the_static_assets() -> None:
+    # `output: "standalone"` does not include .next/static or public/. Missing
+    # them serves HTML with no CSS or JS, which reads as a broken build.
+    text = DOCKERFILE_WEB.read_text(encoding="utf-8")
+    assert ".next/standalone" in text
+    assert ".next/static" in text
+
+
+def test_the_web_image_runs_as_a_non_root_user() -> None:
+    users = [
+        line.split()[1]
+        for line in DOCKERFILE_WEB.read_text(encoding="utf-8").splitlines()
+        if line.startswith("USER ")
+    ]
+    assert users and users[-1] != "root"
+
+
+def test_the_web_healthcheck_does_not_use_loopback() -> None:
+    line = next(
+        line
+        for line in DOCKERFILE_WEB.read_text(encoding="utf-8").splitlines()
+        if line.lstrip().startswith("CMD ") and "fetch(" in line
+    )
+    assert "hostname()" in line
+    assert "127.0.0.1" not in line and "localhost" not in line
+
+
+def test_the_ui_declares_karakalpak() -> None:
+    # lang="kaa" is what tells a screen reader which language to pronounce.
+    layout = (WEB / "app" / "layout.tsx").read_text(encoding="utf-8")
+    assert 'lang="kaa"' in layout
+
+
+def test_ui_strings_use_the_2016_latin_orthography() -> None:
+    # The 2016 standard uses acute letters and dotless i. If these have been
+    # normalised away, the interface is written in a different orthography from
+    # the one the model was trained on.
+    strings = (WEB / "lib" / "strings.ts").read_text(encoding="utf-8")
+    assert any(ch in strings for ch in "áóúǵń"), "no acute letters in the UI strings"
+    assert "ı" in strings, "no dotless i in the UI strings"
+
+
 # --- nginx ----------------------------------------------------------------
 
 

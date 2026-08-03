@@ -99,6 +99,35 @@ services:
               count: 1
               capabilities: [gpu]
 
+  web:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.web
+    image: qaraqalpaqmind-web:latest
+    restart: unless-stopped
+    environment:
+      # An internal hostname, because this is read by the Next.js SERVER. The
+      # browser never sees it and never talks to the gateway directly.
+      QM_API_URL: http://api:8000
+      # The same key the gateway accepts. It stays in this process: the route
+      # handler at app/api/chat/route.ts adds the header server-side. A
+      # NEXT_PUBLIC_ variable would be inlined into the browser bundle instead,
+      # publishing a key that buys GPU time.
+      #
+      # A separate variable from QM_API_KEYS, which is a comma-separated LIST.
+      # Reusing it directly would send `Authorization: Bearer key-one,key-two`
+      # the moment a second key existed, and every request would 401 - with the
+      # gateway logs showing a key mismatch and nothing pointing at the comma.
+      QM_API_KEY: ${QM_WEB_API_KEY:?set QM_WEB_API_KEY in deployment/.env (one key, also listed in QM_API_KEYS)}
+      QM_MODEL: ${QM_MODEL:-qaraqalpaqmind}
+    expose:
+      - "3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - qm
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped

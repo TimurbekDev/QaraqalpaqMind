@@ -3,13 +3,17 @@
 Phase 10b: the container stack that runs the API in production.
 
 ```
-client ──HTTPS──> nginx ──HTTP──> gateway ──HTTP──> vLLM ──> GPU
-                   :80/:443        :8000            :8001
-                   TLS, edge       auth, limits,    weights,
-                   rate limit      SSE, schemas     batching
+                            ┌──> web ──┐   (chat UI, holds the API key)
+client ──HTTPS──> nginx ────┤          ├──> gateway ──> vLLM ──> GPU
+                  :80/:443  └──────────┘    :8000       :8001
+                  TLS, edge                 auth,       weights,
+                  rate limit                limits,     batching
+                                            SSE
 ```
 
-Three containers because they fail and restart on different timescales. The
+`/` is the chat UI (docs/WEB.md), `/v1/*` the OpenAI-compatible API.
+
+Separate containers because they fail and restart on different timescales. The
 gateway restarts in a second; vLLM holds 16 GB of weights and takes minutes. If
 they were one image, every rate-limit tweak would cost a model reload.
 
@@ -18,8 +22,9 @@ they were one image, every rate-limit tweak would cost a model reload.
 ```bash
 cd deployment
 cp .env.example .env          # then put a real key in it
-docker compose up -d          # gateway + nginx, no GPU needed
+docker compose up -d          # gateway + UI + nginx, no GPU needed
 curl localhost/healthz
+# then open http://localhost
 ```
 
 That runs the **echo backend** by default via `QM_SERVE_CONFIG` — canned replies,
@@ -42,7 +47,9 @@ did not ask for.
 python -c "import secrets; print('qm-' + secrets.token_urlsafe(32))"
 ```
 
-Put it in `deployment/.env` as `QM_API_KEYS` (comma-separated for several).
+Put it in `deployment/.env` as `QM_API_KEYS` (comma-separated for several), and
+the same key again as `QM_WEB_API_KEY` — the UI needs exactly one key, and
+reusing the list would send `Bearer key-one,key-two` and 401.
 
 Compose **refuses to start** if the variable is unset — the `:?` in the compose
 file. That is deliberate: a gateway started with no keys and auth enabled
@@ -143,14 +150,17 @@ Run against the real stack, not asserted:
 | Check | Result |
 |---|---|
 | `docker compose config` with no `QM_API_KEYS` | fails with the reason |
-| `--profile gpu` off / on | `api, nginx` / `vllm, api, nginx` |
+| `--profile gpu` off / on | `api, web, nginx` / `vllm, api, nginx, web` |
 | `nginx -t` | passes, and no longer needs `api` to resolve at boot |
 | `/healthz` through nginx | 200 |
 | `/metrics` through nginx | 403 |
 | No key / wrong key / right key | 401 / 401 / 200 |
 | Streaming through nginx | chunks ~40 ms apart, not buffered |
 | `/readyz` with vLLM down | 503, container stays healthy |
-| Image size | 65 MB |
+| Image sizes | gateway 65 MB, web 78 MB |
+| UI through nginx | 200, `lang="kaa"`, CSS 200 |
+| Full-chain stream, nginx → web → gateway | chunks ~75 ms apart |
+| API key in the browser bundle | **not present** |
 | Build context | 449 MB of `data/` excluded by `.dockerignore` |
 
 ## 7. Not done yet

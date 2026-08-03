@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f7f9;
+  --color-ink: #10131a;
+  --color-ink-muted: #5b6472;
+  --color-accent: #1f6feb;
+  --color-line: #e3e6ea;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-surface: #0f1116;
+    --color-surface-muted: #171a21;
+    --color-ink: #e8eaed;
+    --color-ink-muted: #9aa3b2;
+    --color-accent: #4f8cf7;
+    --color-line: #262b34;
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  /* No web font. Karakalpak needs á ó ú ǵ ń ı, and a font loaded over the
+     network that lacks a glyph renders tofu for exactly the letters that carry
+     meaning. System stacks have full Latin Extended-A coverage. */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The caret should sit at the end of streaming text, not on its own line. */
+@keyframes caret {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.streaming-caret::after {
+  content: "▍";
+  margin-inline-start: 1px;
+  animation: caret 1s steps(1) infinite;
+  color: var(--color-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-caret::after {
+    animation: none;
+  }
+}
