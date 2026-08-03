@@ -29,10 +29,12 @@ const MODEL = process.env.QM_MODEL ?? "qaraqalpaqmind";
 interface ClientRequest {
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   temperature?: number;
+  system?: string;
 }
 
 const MAX_MESSAGES = 50;
 const MAX_CHARS = 32_000;
+const MAX_SYSTEM_CHARS = 4_000;
 
 function badRequest(message: string): Response {
   return Response.json({ error: { message, type: "invalid_request_error" } }, { status: 400 });
@@ -67,9 +69,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   // Rebuilt rather than forwarded. Passing the client's object through would
   // let a caller set `model`, `max_tokens` or any other field the gateway
   // accepts, using this server's key to do it.
+  const system =
+    typeof body.system === "string" && body.system.trim()
+      ? body.system.trim().slice(0, MAX_SYSTEM_CHARS)
+      : null;
+
   const upstream = {
     model: MODEL,
-    messages: body.messages.map((m) => ({ role: m.role, content: m.content })),
+    messages: [
+      // Prepended here rather than trusted from the messages array, so a system
+      // turn always lands first and cannot be smuggled into the middle of a
+      // conversation to override an earlier instruction.
+      ...(system ? [{ role: "system" as const, content: system }] : []),
+      ...body.messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
     temperature: clamp(body.temperature ?? 0.7, 0, 2),
     stream: true,
   };

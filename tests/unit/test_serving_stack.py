@@ -9,6 +9,8 @@ unreachable.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import yaml
 
 from qaraqalpaqmind.common.paths import PROJECT_ROOT
@@ -150,7 +152,24 @@ WEB = PROJECT_ROOT / "web"
 DOCKERFILE_WEB = DEPLOYMENT / "Dockerfile.web"
 
 
-def _code_lines(path) -> list[str]:
+def _components() -> list[Path]:
+    """Every component, at any depth.
+
+    Recursive on purpose: a hardcoded directory silently stops checking the
+    moment a file moves, and these are the security guards.
+    """
+    found = [p for p in (WEB / "components").rglob("*.tsx")]
+    assert found, "no components found - has the directory moved?"
+    return found
+
+
+def _one(name: str) -> Path:
+    matches = [p for p in (WEB / "components").rglob(name)]
+    assert len(matches) == 1, f"expected exactly one {name}, found {len(matches)}"
+    return matches[0]
+
+
+def _code_lines(path: Path) -> list[str]:
     """Source lines with comments dropped.
 
     The comments in these files name the exact anti-patterns being avoided, so
@@ -181,9 +200,9 @@ def test_the_key_is_read_only_in_a_server_route() -> None:
     assert '"use client"' not in route
     assert 'runtime = "nodejs"' in route
 
-    for path in (WEB / "components").glob("*.tsx"):
-        text = path.read_text(encoding="utf-8")
-        assert "process.env" not in text, path.name
+    for path in _components():
+        for line in _code_lines(path):
+            assert "process.env" not in line, f"{path.name}: {line.strip()}"
 
 
 def test_the_web_container_gets_a_single_key_not_the_list() -> None:
@@ -234,7 +253,7 @@ def test_model_output_is_never_rendered_as_raw_html() -> None:
     #
     # layout.tsx is the one allowed use: a constant theme bootstrap script that
     # must run before first paint, with no user input in it.
-    for path in (WEB / "components").glob("*.tsx"):
+    for path in _components():
         for line in _code_lines(path):
             assert "dangerouslySetInnerHTML" not in line, f"{path.name}: {line.strip()}"
 
@@ -243,7 +262,7 @@ def test_links_in_model_output_are_restricted_to_http() -> None:
     # A model can emit `javascript:` or `data:` URLs, either because it learned
     # them or because someone asked it to. Rendering one as a clickable anchor
     # makes model output executable.
-    markdown = (WEB / "components" / "Markdown.tsx").read_text(encoding="utf-8")
+    markdown = _one("Markdown.tsx").read_text(encoding="utf-8")
     assert '["http:", "https:"]' in markdown
     assert "new URL(href)" in markdown
     # An anchor that opens a new tab needs both, or the opened page can reach
@@ -264,6 +283,48 @@ def test_ui_strings_use_the_2016_latin_orthography() -> None:
     strings = (WEB / "lib" / "strings.ts").read_text(encoding="utf-8")
     assert any(ch in strings for ch in "áóúǵń"), "no acute letters in the UI strings"
     assert "ı" in strings, "no dotless i in the UI strings"
+
+
+def test_streaming_messages_are_memoised() -> None:
+    # Every token appends to the last message and re-renders the list. Without
+    # memo, a long conversation reparses every markdown tree per token and the
+    # stream visibly stutters.
+    for name in ("MessageItem.tsx", "Markdown.tsx", "CodeBlock.tsx"):
+        text = _one(name).read_text(encoding="utf-8")
+        assert "memo(" in text, name
+
+
+def test_single_key_shortcuts_do_not_fire_while_typing() -> None:
+    # "/" and "?" are ordinary characters. A global handler that ignores the
+    # focused element makes them impossible to type into a message.
+    shell = _one("ChatShell.tsx").read_text(encoding="utf-8")
+    assert "isContentEditable" in shell
+    assert "if (typing) return;" in shell
+
+
+def test_dialogs_use_the_native_element() -> None:
+    # <dialog> + showModal() gives focus trapping, Escape, page inertness and
+    # correct semantics. A div modal reimplements those, usually incompletely.
+    dialog = _one("Dialog.tsx").read_text(encoding="utf-8")
+    assert "showModal()" in dialog
+    assert "<dialog" in dialog
+
+
+def test_icon_only_buttons_require_an_accessible_name() -> None:
+    # An icon button with no name is unusable with a screen reader, and it is
+    # easy to forget per call site - so the type makes it non-optional.
+    button = _one("IconButton.tsx").read_text(encoding="utf-8")
+    assert "label: string;" in button
+    assert "aria-label={label}" in button
+
+
+def test_reduced_motion_is_respected() -> None:
+    css = (WEB / "app" / "globals.css").read_text(encoding="utf-8")
+    assert "prefers-reduced-motion: reduce" in css
+    # The streaming caret must stay visible when animation stops - it is the
+    # only signal that generation is still running.
+    block = css.split("prefers-reduced-motion: reduce")[1]
+    assert "streaming-caret" in block and "opacity: 1" in block
 
 
 # --- nginx ----------------------------------------------------------------

@@ -1,5 +1,5 @@
-import Chat from "@/components/Chat";
+import ChatShell from "@/components/ChatShell";
 
 export default function Page() {
-  return <Chat />;
+  return <ChatShell />;
 }

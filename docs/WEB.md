@@ -80,7 +80,55 @@ returns the correct answer, delivered in one lump when generation finishes —
 which is indistinguishable from broken frontend code. Verified end to end
 through both proxies: chunks arrive ~75 ms apart.
 
-## 4. What the interface does
+## 4. Design audit and what changed
+
+The first version worked but was a single-conversation demo. Ranked by how much
+each problem cost a real user:
+
+| # | Problem | Why it mattered | Fix |
+|---|---|---|---|
+| 1 | One conversation only | Every new question destroyed the previous answer. No way back to anything. | Sidebar with conversation list, grouped Today / This week / Older |
+| 2 | No way to find past work | With history, a flat list is unusable past ~20 items | Search over titles **and** message bodies, deferred so typing never blocks |
+| 3 | Full-width text | Lines ran to the window edge; the eye loses its place returning to the next line | One `--measure` token, 46rem (~65 characters) |
+| 4 | Nothing between "sent" and "first token" | On a cold model that gap is seconds and the page looks frozen | `status` distinguishes `waiting` from `streaming`: dots, then caret |
+| 5 | A failed answer was a dead end | The error replaced the partial output and offered nothing | Error keeps partial text and adds Retry |
+| 6 | Stop discarded the rest | Stopping mid-answer meant re-asking from scratch | Truncated turns are marked and offer **Continue** |
+| 7 | No way to fix a typo'd question | Users retyped the whole prompt | Inline edit on user turns, re-asks from that point |
+| 8 | Mouse-only | No shortcuts at all | ⌘K, ⌘⇧O, ⌘B, ⌘, `/`, `Esc`, `?` with a help dialog |
+| 9 | No settings | Temperature and system prompt were hardcoded | Settings dialog, persisted |
+| 10 | Theme was a cycling icon | Three states are one too many to discover by clicking | Segmented control showing all three |
+| 11 | Code blocks unstyled | Unreadable for anything longer than a line | Header with language + copy, and highlighting |
+| 12 | Tables not rendered | Markdown tables came out as pipes | Real `<table>`, scrolling in its own container |
+| 13 | Icons drifted | Each component inlined its own SVGs at different stroke weights | One `Icon` component |
+| 14 | Streaming re-rendered everything | Every token reparsed every markdown tree | `memo` on message, markdown and code block |
+
+### Decisions worth stating
+
+**User messages are bubbles; assistant messages are not.** The assistant writes
+long-form prose, and a bubble around 400 words adds a box that constrains the
+measure without adding information. The user's turns are short and benefit from
+the visual anchor of "this is what I asked". This matches what ChatGPT and
+Claude settled on, for the same reason.
+
+**46rem measure, not full width.** Comfortable reading is roughly 60–75
+characters per line. Wider looks like it uses the space better and is measurably
+harder to read.
+
+**No voice button, no file attachments, no citations.** There is no
+speech-to-text endpoint, the model is text-only Qwen3, and retrieval is Phase 9.
+A control that does nothing teaches users the product is broken — worse than an
+absent feature. They go in when the backend exists.
+
+**Hand-rolled syntax highlighting.** Shiki and Prism are correct and cost
+200 kB–1 MB. The whole page is 116 kB. The tokenizer here handles comments,
+strings, numbers and keywords for six languages and leaves unknown tokens plain
+— miscoloured code is worse than uncoloured code.
+
+**Native `<dialog>`.** `showModal()` gives focus trapping, Escape, page
+inertness and correct semantics for free. A div-based modal reimplements all of
+that, usually incompletely.
+
+## 5. What the interface does
 
 | Feature | Note |
 |---|---|
@@ -93,6 +141,12 @@ through both proxies: chunks arrive ~75 ms apart.
 | Jump-to-latest | Appears only when scrolled away from the bottom. |
 | Character counter | Shows from 80% of the server's 32,000 limit, so hitting it is not a surprise. |
 | Focus return | The composer refocuses when a reply finishes. |
+| Conversation search | Titles and message bodies, `useDeferredValue` so typing stays responsive. |
+| Inline edit | On user turns; re-asks from that point and drops what followed. |
+| Continue after stop | A stopped answer is marked and resumes into the same message. |
+| Retry on error | Keeps whatever streamed before the failure. |
+| Settings | Temperature, system prompt, Enter-to-send, theme, clear-all. |
+| Keyboard | ⌘K search, ⌘⇧O new, ⌘B sidebar, ⌘, settings, `/` focus, `Esc` stop, `?` help. |
 
 ### Markdown safety
 
@@ -111,7 +165,7 @@ language label, an **unterminated** fence (the common case mid-stream), a
 `https:` link with `rel="noopener noreferrer"`, and `javascript:`/`data:` links
 producing no anchor. 16/16.
 
-## 5. Interface details worth knowing
+## 6. Interface details worth knowing
 
 | Thing | Why |
 |---|---|
@@ -123,7 +177,7 @@ producing no anchor. 16/16.
 | Abort is not an error | Pressing stop keeps whatever streamed so far; only real failures render as errors. |
 | `AbortSignal` forwarded upstream | A cancelled generation stops occupying the GPU instead of running for a browser that has gone. |
 
-## 6. The strings need a native speaker
+## 7. The strings need a native speaker
 
 Every user-visible string is in `web/lib/strings.ts`, collected there so a
 native speaker can review the whole interface without reading React.
@@ -134,13 +188,13 @@ dotless `ı` are distinct letters, not decorated versions of `a o u g n i` — a
 well-meant "fix" to plain ASCII changes the words. A test asserts these
 characters are still present.
 
-## 7. Verified
+## 8. Verified
 
 Run against the stack, not asserted:
 
 | Check | Result |
 |---|---|
-| `npm run build` | clean, 108 kB first load |
+| `npm run build` | clean, 116 kB first load |
 | `npm run typecheck` | clean (`strict`, `noUncheckedIndexedAccess`) |
 | UI through nginx | 200, `lang="kaa"`, correct 2016 orthography |
 | CSS from the standalone image | 200 |
@@ -149,10 +203,13 @@ Run against the stack, not asserted:
 | Invalid body / role / content type | 400 with a reason |
 | `"model": "evil"` in the request | ignored; `qaraqalpaqmind` sent |
 | Web image size | 78 MB |
+| Accessibility in served HTML | skip link, `aria-expanded`/`aria-controls`, labelled search and composer |
+| `temperature: 99` / `-5` | clamped server-side, 200 |
+| 51 messages | 400 |
 | Markdown renderer, SSR'd | 16/16, incl. `javascript:`/`data:` rendering inert |
 | Theme, persistence, copy, regenerate | present in served HTML |
 
-## 8. Not done yet
+## 9. Not done yet
 
 - No syntax highlighting inside code blocks.
 - One conversation, not a list of them. Starting a new chat discards the old.
@@ -160,4 +217,4 @@ Run against the stack, not asserted:
   the gateway per-key limits. Since the UI holds one key, all visitors share
   that key's budget. Give the UI its own key and its own quota before opening
   it to the public.
-- The strings are unreviewed (§6).
+- The strings are unreviewed (§7).
