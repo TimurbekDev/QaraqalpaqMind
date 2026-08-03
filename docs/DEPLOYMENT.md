@@ -70,10 +70,10 @@ token count describing a run are never separated from it.
 
 ```bash
 # On the machine that has the data:
-qm ingest push <your-name>/qaraqalpaqmind-data     # private by default
+qm ingest push Timurbek/qaraqalpaqmind-data     # private by default
 
 # On the pod:
-qm ingest pull <your-name>/qaraqalpaqmind-data
+qm ingest pull Timurbek/qaraqalpaqmind-data
 ```
 
 The repo defaults to **private**: several crawled sources have an `unknown`

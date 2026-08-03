@@ -193,7 +193,7 @@ version:
 
 ```bash
 bash scripts/runpod_setup.sh            # install, caches, preflight
-qm ingest pull <you>/qaraqalpaqmind-data   # or rebuild: qm ingest all --bulk-only
+qm ingest pull Timurbek/qaraqalpaqmind-data   # or rebuild: qm ingest all --bulk-only
 qm train preflight --config configs/cpt/qwen3_8b_qlora_24gb.yaml
 qm train cpt       --config configs/cpt/qwen3_8b_qlora_24gb.yaml
 ```

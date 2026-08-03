@@ -112,7 +112,7 @@ def build_dataset(config: CPTConfig, tokenizer: Any) -> tuple[Any, Any, PackingS
             "\n"
             "data/ is not in git, so a fresh clone has no corpus. Choose one:\n"
             "  a) pull the corpus you built elsewhere:\n"
-            "       qm ingest pull <your-name>/qaraqalpaqmind-data\n"
+            "       qm ingest pull Timurbek/qaraqalpaqmind-data\n"
             "  b) rebuild from public sources only (no crawling, ~93% of it):\n"
             "       qm ingest all --bulk-only && qm clean all && qm dedup run\n"
             "  c) copy the file to the path above yourself (it is ~35 MB)\n"
