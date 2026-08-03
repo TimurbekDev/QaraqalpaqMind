@@ -38,7 +38,20 @@
       "PowerShell(.\\\\.venv\\\\Scripts\\\\qm.exe train dpo --dry-run)",
       "Bash(./.venv/Scripts/python.exe -m pytest -q)",
       "Bash(./.venv/Scripts/mypy.exe src/qaraqalpaqmind scripts)",
-      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg13.txt\" 2>&1)"
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg13.txt\" 2>&1)",
+      "Bash(grep -rn \"os.name\\\\|platform.system\\\\|sys.platform\\\\|winget\\\\|\\\\.exe\\\\|C:\\\\\\\\\\\\\\\\\\\\|D:\\\\\\\\\\\\\\\\\" src/ scripts/)",
+      "Bash(chmod +x scripts/runpod_setup.sh)",
+      "Bash(git update-index *)",
+      "Bash(bash -n scripts/runpod_setup.sh)",
+      "Bash(./.venv/Scripts/qm.exe --help)",
+      "PowerShell($env:PYTHONIOENCODING=\"utf-8\"; Write-Output \"=== preflight on a no-GPU machine \\(should fail cleanly\\) ===\"; .\\\\.venv\\\\Scripts\\\\qm.exe train preflight 2>&1 | Select-Object -Last 10; Write-Output \"exit=$LASTEXITCODE\")",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest tests/unit/test_deployment.py -q 2>&1)",
+      "PowerShell(git add -A ':!.claude')",
+      "PowerShell(git commit -q -F \"C:\\\\Users\\\\timur\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Dev-open-source-QaraqalpaqMind\\\\478468e8-d500-4142-ad44-a5a77af6e033\\\\scratchpad\\\\commit_msg14.txt\" 2>&1)",
+      "Bash(grep -v \"^\\\\./\\\\.git/\")",
+      "PowerShell(bash -n scripts/runpod_setup.sh)",
+      "Bash(grep -m2 '\\\\\\\\r')",
+      "Bash(bash -n /tmp/committed.sh)"
     ]
   }
 }
