@@ -146,6 +146,22 @@ class RuntimeConfig(StrictModel):
     max_steps: int | None = Field(default=None, ge=1)
 
     per_device_batch_size: int = Field(default=1, ge=1)
+
+    # MUST be set explicitly. `TrainingArguments.per_device_eval_batch_size`
+    # defaults to 8, so a config that sets only the train batch size trains
+    # happily at batch 1 and then OOMs at the first evaluation.
+    #
+    # The logits tensor is what kills it: (batch x seq x vocab), and the loss
+    # upcasts it to fp32. For Qwen3-8B at seq 2048 that is 1.16 GiB per batch
+    # element, so batch 8 asks for 9.27 GiB in a single allocation.
+    per_device_eval_batch_size: int = Field(default=1, ge=1)
+
+    # Discard eval logits and keep only the loss. Without this the Trainer
+    # gathers logits from every eval batch to hand to a metrics function -
+    # 1.16 GiB per element, accumulated across the whole eval set - when the
+    # only metric here is eval_loss.
+    prediction_loss_only: bool = True
+
     gradient_accumulation_steps: int = Field(default=16, ge=1)
 
     gradient_checkpointing: bool = True

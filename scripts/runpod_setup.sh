@@ -44,6 +44,13 @@ if [ -d "$WORKSPACE" ]; then
   export TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-$WORKSPACE/.cache/triton}"
   mkdir -p "$HF_HOME" "$TRITON_CACHE_DIR"
 
+  # Recommended by PyTorch's own OOM message. Training alternates between small
+  # activation tensors and a very large logits tensor, which fragments the
+  # caching allocator: a real run showed 2.16 GiB reserved but unallocated.
+  # Expandable segments let the allocator grow a block instead of failing to
+  # find a contiguous one.
+  export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+
   # Persist for future shells, without duplicating the export if re-run.
   if ! grep -q "QARAQALPAQMIND_ENV" ~/.bashrc 2>/dev/null; then
     {
@@ -52,6 +59,7 @@ if [ -d "$WORKSPACE" ]; then
       echo "export HF_HOME=$HF_HOME"
       echo "export TRITON_CACHE_DIR=$TRITON_CACHE_DIR"
       echo "export TOKENIZERS_PARALLELISM=false"
+      echo "export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
     } >> ~/.bashrc
   fi
 else

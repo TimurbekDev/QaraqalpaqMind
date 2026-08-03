@@ -62,6 +62,16 @@ runtime:
   num_epochs: 1.0
   max_steps: null
   per_device_batch_size: 1
+  # Explicit. The transformers default is 8 and is NOT tied to the train batch
+  # above, so leaving it out trains fine for hours and then OOMs at the first
+  # evaluation. The logits tensor is (batch x seq x 151,936 vocab), upcast to
+  # fp32 in the loss: at seq 1024 that is 4.63 GiB for batch 8. DPO is the
+  # worst case, because it computes logits for chosen and rejected under both
+  # the policy and the reference model - four times over.
+  per_device_eval_batch_size: 1
+  # Keep only the loss from evaluation. Otherwise the Trainer gathers
+  # logits from every eval batch for a metrics function we do not use.
+  prediction_loss_only: true
   # DPO holds four sequences in memory per example (chosen and rejected, policy
   # and reference), so the micro-batch is smaller than SFT's.
   gradient_accumulation_steps: 16

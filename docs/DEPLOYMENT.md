@@ -103,9 +103,35 @@ runpodctl send data/datasets/pretrain/pretrain_v1.jsonl.zst
 | Gradients, 189 M × 2 bytes | 0.38 |
 | AdamW states, 189 M × 8 bytes | 1.51 |
 | Activations (checkpointed, seq 2048, bs 1) | 2.5–4.0 |
+| **Logits, bs 1 × seq 2048 × 151,936 vocab** | **1.74** |
 | CUDA context + fragmentation | ~1.5 |
-| **Peak** | **11.7–13.2** |
-| **Headroom on 24 GB** | **~10.8** |
+| **Peak** | **13.4–14.9** |
+| **Headroom on 24 GB** | **~9.1** |
+
+#### The logits row is the one that bites
+
+An earlier version of this table omitted it, and a real run died because of
+that. The logits tensor is `batch × sequence × vocabulary`, and the causal-LM
+loss keeps a bf16 copy *and* an fp32 copy — 1.16 GiB of fp32 per batch element
+at sequence 2048, 1.74 GB counting both.
+
+It scales linearly with batch size while nothing else in the table does, so it
+dominates the moment the batch grows:
+
+| Batch | fp32 logits | bf16 + fp32 |
+|---:|---:|---:|
+| 1 | 1.16 GiB | 1.74 GB |
+| 2 | 2.32 GiB | 3.48 GB |
+| 8 | **9.27 GiB** | 13.9 GB |
+
+Batch 8 is not a hypothetical. `TrainingArguments.per_device_eval_batch_size`
+**defaults to 8**, so a config that sets only `per_device_train_batch_size`
+trains happily at batch 1 for hours and then requests 9.27 GiB in one
+allocation at the first evaluation. Every shipped config now sets
+`per_device_eval_batch_size: 1` and `prediction_loss_only: true` explicitly,
+and `tests/unit/test_oom_guards.py` fails if one regresses.
+
+`qm train plan` prints both logits figures before you launch.
 
 ### Everything else
 

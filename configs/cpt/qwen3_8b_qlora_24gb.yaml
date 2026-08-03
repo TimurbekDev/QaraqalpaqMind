@@ -12,16 +12,23 @@
 #   gradients,     189M x 2 bytes             0.38 GB
 #   AdamW states,  189M x 8 bytes             1.51 GB
 #   activations, checkpointed, seq 2048 bs 1  ~2.5-4.0 GB
+#   logits, bs 1 x 2048 x 151,936 vocab       1.74 GB   <- see below
 #   CUDA context + fragmentation              ~1.5 GB
 #   -----------------------------------------------------
-#   peak                                      ~11.7-13.2 GB
-#   headroom on 24 GB                         ~10.8 GB
+#   peak                                      ~13.4-14.9 GB
+#   headroom on 24 GB                         ~9.1 GB
+#
+# The logits row was missing from an earlier version of this budget, and a real
+# run died because of it. It is the only row that scales linearly with batch
+# size, so it dominates the moment the batch grows - and evaluation has its own
+# batch size that defaults to 8, not to the train batch. See the runtime block.
 #
 # The headroom is deliberate and NOT wasted capacity to be reclaimed blindly.
 # per_device_batch_size 2 would very likely fit and improve GPU utilisation,
 # but that has not been measured on this hardware, so it is not the shipped
 # default. To try it, halve gradient_accumulation_steps to 8 so tokens/step
-# stays at 32,768, and watch `nvidia-smi` on the first 20 steps.
+# stays at 32,768, add 1.74 GB for the extra logits, and watch `nvidia-smi` on
+# the first 20 steps.
 #
 # Expected shape on 28.7M measured tokens:
 #   tokens/step = 1 x 16 x 2048 = 32,768
@@ -38,6 +45,14 @@ method: qlora
 
 runtime:
   per_device_batch_size: 1
+  # Explicit. The transformers default is 8, and the logits tensor is
+  # (batch x seq x 151,936 vocab) upcast to fp32 in the loss - batch 8 at
+  # seq 2048 asks for 9.27 GiB in one allocation and OOMs a 24GB card at
+  # the first evaluation, after training has run happily for 200 steps.
+  per_device_eval_batch_size: 1
+  # Keep only the loss from evaluation. Otherwise the Trainer gathers
+  # logits from every eval batch for a metrics function we do not use.
+  prediction_loss_only: true
   # 16 accumulation steps give a 32,768-token optimiser step. Smaller batches
   # make the loss curve too noisy to read on a corpus this small.
   gradient_accumulation_steps: 16

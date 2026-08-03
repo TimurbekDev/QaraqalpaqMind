@@ -87,6 +87,9 @@ runtime:
   num_epochs: 2.0
   max_steps: null
   per_device_batch_size: 1
+  # Never leave this at the transformers default of 8: see the 24GB config.
+  per_device_eval_batch_size: 1
+  prediction_loss_only: true
   gradient_accumulation_steps: 16
   gradient_checkpointing: true
   bf16: true

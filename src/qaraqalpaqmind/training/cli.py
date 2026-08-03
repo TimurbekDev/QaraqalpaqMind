@@ -7,12 +7,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from ..common.config import load_config
+
+if TYPE_CHECKING:
+    from ..common.runtime import Finding, GpuInfo
 from ..common.logging import get_logger
 from ..ingest.manifest import read_manifest
 from .config import CPTConfig, TuningMethod
@@ -106,9 +110,53 @@ def plan(
     )
     console.print(
         f"Weights + optimizer: ~[cyan]{memory:.1f} GB[/] per GPU, "
-        f"plus ~4-6 GB activations at this sequence length"
+        f"plus ~2.5-4 GB activations at this sequence length"
     )
+    _report_logits_memory(config)
     _warn(config, schedule)
+
+
+# Qwen3-8B vocabulary. The logits tensor is (batch x seq x vocab), and the
+# causal-LM loss upcasts it to fp32 - which is the largest single allocation in
+# the whole run and was missing from the original budget.
+_QWEN3_VOCAB = 151_936
+
+
+def _logits_gb(batch: int, sequence_length: int) -> float:
+    """Peak logits memory: the bf16 tensor plus its fp32 copy in the loss."""
+    elements = batch * sequence_length * _QWEN3_VOCAB
+    return (elements * 2 + elements * 4) / 1024**3
+
+
+def _report_logits_memory(config: CPTConfig) -> None:
+    """Show the logits cost for train and eval batches separately.
+
+    This exists because a config that set only the train batch size trained
+    fine for 200 steps and then OOMed at the first evaluation: transformers
+    defaults `per_device_eval_batch_size` to 8, which asks for 9.27 GiB in one
+    allocation at sequence length 2048.
+    """
+    train = _logits_gb(config.runtime.per_device_batch_size, config.data.sequence_length)
+    evaluate = _logits_gb(
+        config.runtime.per_device_eval_batch_size, config.data.sequence_length
+    )
+
+    console.print(
+        f"Logits (batch x seq x {_QWEN3_VOCAB:,} vocab, bf16 + fp32 loss copy): "
+        f"train [cyan]{train:.2f} GB[/], eval [cyan]{evaluate:.2f} GB[/]"
+    )
+
+    if evaluate > train * 1.5:
+        console.print(
+            f"  [yellow]Eval batch {config.runtime.per_device_eval_batch_size} costs "
+            f"{evaluate / max(train, 0.01):.1f}x the train batch's logits memory.[/] "
+            "Evaluation will be the peak, and it only happens every eval_steps."
+        )
+    if evaluate > 6.0:
+        console.print(
+            f"  [red]Eval logits alone need {evaluate:.1f} GB.[/] Lower "
+            "runtime.per_device_eval_batch_size."
+        )
 
 
 def _lora_parameter_estimate(config: CPTConfig) -> float:
@@ -176,12 +224,67 @@ def preflight(
             )
             findings.append(Finding("error", "flash-attn missing"))
 
+    _check_logits_fit(config, gpu, findings)
     _checkpoint_state(config)
 
     if any(f.level == "error" for f in findings):
         console.print("\n[red]Not ready.[/] Fix the errors above before training.")
         raise typer.Exit(code=1)
     console.print("\n[green]Ready to train.[/]")
+
+
+#: Everything that is resident while the logits tensor exists: 4-bit base
+#: weights, adapters, gradients, optimizer states, checkpointed activations and
+#: the CUDA context. Measured for Qwen3-8B QLoRA at r=64.
+_RESIDENT_GB = 13.0
+
+
+def _check_logits_fit(config: CPTConfig, gpu: GpuInfo, findings: list[Finding]) -> None:
+    """Fail preflight if the eval logits tensor cannot fit on this card.
+
+    A real run passed every other check, trained for 200 steps, and then died
+    asking for 9.27 GiB at the first evaluation. Nothing in preflight looked at
+    `per_device_eval_batch_size`, whose transformers default is 8.
+    """
+    from ..common.runtime import Finding
+
+    train = _logits_gb(config.runtime.per_device_batch_size, config.data.sequence_length)
+    evaluate = _logits_gb(
+        config.runtime.per_device_eval_batch_size, config.data.sequence_length
+    )
+    peak = max(train, evaluate)
+
+    # Assume the 24GB target card when running preflight on a laptop, so the
+    # check still means something before the pod exists.
+    total = gpu.total_memory_gb if gpu.available and gpu.total_memory_gb else 24.0
+    budget = total - _RESIDENT_GB
+
+    if peak > budget:
+        problem = (
+            f"logits need {peak:.2f} GB but only ~{budget:.1f} GB is free on "
+            f"{total:.0f} GB after weights and activations. Eval batch "
+            f"{config.runtime.per_device_eval_batch_size} x seq "
+            f"{config.data.sequence_length:,} x {_QWEN3_VOCAB:,} vocab. Set "
+            "runtime.per_device_eval_batch_size to 1."
+        )
+    elif not config.runtime.prediction_loss_only:
+        # Per-batch size is fine, but the Trainer will accumulate logits across
+        # the entire eval set to hand to a metrics function we do not define.
+        problem = (
+            f"runtime.prediction_loss_only is false, so eval logits accumulate across "
+            f"the whole eval set at {peak:.2f} GB per batch. Set it to true."
+        )
+    else:
+        console.print(
+            f"[green]OK   [/] logits {peak:.2f} GB peak "
+            f"(train batch {config.runtime.per_device_batch_size}, "
+            f"eval batch {config.runtime.per_device_eval_batch_size}, "
+            f"seq {config.data.sequence_length:,})"
+        )
+        return
+
+    console.print(f"[red]ERROR[/] {problem}")
+    findings.append(Finding("error", problem))
 
 
 def _checkpoint_state(config: CPTConfig) -> None:

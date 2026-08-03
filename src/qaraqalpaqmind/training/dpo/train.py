@@ -147,6 +147,10 @@ def build_trainer(config: DPOConfig, model: Any, tokenizer: Any, train: Any, eva
         num_train_epochs=config.runtime.num_epochs,
         max_steps=config.runtime.max_steps or -1,
         per_device_train_batch_size=config.runtime.per_device_batch_size,
+        # Explicit: the transformers default is 8, which OOMs at the first
+        # evaluation because the logits tensor is batch x seq x vocab.
+        per_device_eval_batch_size=config.runtime.per_device_eval_batch_size,
+        prediction_loss_only=config.runtime.prediction_loss_only,
         gradient_accumulation_steps=config.runtime.gradient_accumulation_steps,
         gradient_checkpointing=config.runtime.gradient_checkpointing,
         gradient_checkpointing_kwargs={"use_reentrant": False},

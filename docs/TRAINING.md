@@ -106,9 +106,41 @@ config saves the best checkpoint by `eval_loss`, not the last.
 | LoRA adapters (r=64) + gradients | ~0.7 GB |
 | AdamW states (adapters only) | ~0.6 GB |
 | Activations, checkpointed, seq 2048 batch 1 | ~4–6 GB |
-| **Total** | **~11–13 GB** |
+| Logits, batch 1 × seq 2048 × 151,936 vocab | ~1.7 GB |
+| **Total** | **~13–15 GB** |
 
 Run shape: 32,768 tokens/step → 875 steps/epoch → **1,750 steps** for 2 epochs.
+
+### The evaluation batch size is a separate setting, and its default is 8
+
+Everything above scales with `per_device_batch_size` — except that it doesn't
+govern evaluation. `TrainingArguments.per_device_eval_batch_size` defaults to
+**8** independently, so a config that sets only the train batch trains fine at
+batch 1 and then OOMs at the first `eval_steps` boundary, hours in.
+
+The logits tensor is why. It is `batch × sequence × vocabulary` and the loss
+upcasts it to fp32:
+
+```
+1 × 2048 × 151,936 × 4 bytes = 1.16 GiB
+8 × 2048 × 151,936 × 4 bytes = 9.27 GiB   ← one allocation, on a 24 GB card
+```
+
+Two settings prevent it, and every config under `configs/` sets both:
+
+```yaml
+runtime:
+  per_device_eval_batch_size: 1
+  prediction_loss_only: true   # discard eval logits; keep only eval_loss
+```
+
+`prediction_loss_only` matters on its own. Without it the `Trainer` gathers
+logits from every eval batch to hand to a `compute_metrics` function — 1.16 GiB
+per element, accumulated across the whole eval set — when the only metric here
+is `eval_loss`, which the model already returns.
+
+`qm train plan` prints train and eval logits size and refuses configs above
+6 GB. `tests/unit/test_oom_guards.py` fails if a shipped config regresses.
 
 ### `qwen3_8b_lora_a100.yaml`
 
