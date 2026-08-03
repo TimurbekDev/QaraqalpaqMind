@@ -36,7 +36,7 @@ cp .env.example .env
 #    Edit .env: set HF_TOKEN, and HF_HOME=/workspace/.cache/huggingface
 
 # 4. Data - see section 3
-qm ingest pull Timurbek/qaraqalpaqmind-data
+qm ingest pull timurbek-saburov/qaraqalpaqmind-data
 
 # 5. Verify before spending money on a download
 qm doctor
@@ -70,10 +70,10 @@ token count describing a run are never separated from it.
 
 ```bash
 # On the machine that has the data:
-qm ingest push Timurbek/qaraqalpaqmind-data     # private by default
+qm ingest push timurbek-saburov/qaraqalpaqmind-data     # private by default
 
 # On the pod:
-qm ingest pull Timurbek/qaraqalpaqmind-data
+qm ingest pull timurbek-saburov/qaraqalpaqmind-data
 ```
 
 The repo defaults to **private**: several crawled sources have an `unknown`

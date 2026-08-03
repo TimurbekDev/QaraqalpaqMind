@@ -98,7 +98,7 @@ else
   warn ""
   warn "Choose one:"
   warn "  a) Pull the exact corpus you built elsewhere (needs HF_TOKEN):"
-  warn "       qm ingest pull Timurbek/qaraqalpaqmind-data"
+  warn "       qm ingest pull timurbek-saburov/qaraqalpaqmind-data"
   warn "  b) Rebuild from public sources only - no crawling, ~93% of the corpus:"
   warn "       qm ingest all --bulk-only && qm clean all && qm dedup run"
   warn "  c) Copy the file to $PRETRAIN yourself (runpodctl / scp)."

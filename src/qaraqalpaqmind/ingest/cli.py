@@ -95,7 +95,7 @@ def list_sources(
 
 @app.command()
 def push(
-    repo_id: str = typer.Argument(..., help="Hub dataset repo, e.g. Timurbek/qaraqalpaqmind-data"),
+    repo_id: str = typer.Argument(..., help="Hub dataset repo, e.g. timurbek-saburov/qaraqalpaqmind-data"),
     private: bool = typer.Option(True, "--private/--public"),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:

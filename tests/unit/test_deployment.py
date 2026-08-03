@@ -112,6 +112,25 @@ def test_every_trainer_wires_resume() -> None:
         assert "resolve_resume" in source, module
 
 
+# --- shell scripts --------------------------------------------------------
+
+
+def test_shell_scripts_have_unix_line_endings() -> None:
+    """A CRLF shell script fails on Linux with a syntax error near `}`.
+
+    `.gitattributes` normalises `*.sh` on commit, so this is belt-and-braces -
+    but editing a script from a Windows Python process reintroduces CRLF in the
+    working copy, and the failure message points at the wrong line.
+    """
+    for script in (PROJECT_ROOT / "scripts").glob("*.sh"):
+        assert b"\r\n" not in script.read_bytes(), f"{script.name} has CRLF line endings"
+
+
+def test_shell_scripts_start_with_a_shebang() -> None:
+    for script in (PROJECT_ROOT / "scripts").glob("*.sh"):
+        assert script.read_bytes().startswith(b"#!"), script.name
+
+
 # --- path resolution ------------------------------------------------------
 
 
