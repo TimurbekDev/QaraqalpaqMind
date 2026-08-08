@@ -10,7 +10,10 @@
 # answers questions. Translation is therefore capped at 30%.
 
 name: sft_v1
-target_size: 50000
+# Bounded by instruction-following data, not by total data. At 50000 the
+# translation and grammar caps alone were 74% of the built mixture and the
+# resulting model answered Karakalpak questions in Azerbaijani.
+target_size: 20000
 validation_split: 0.02
 seed: 20260731
 
@@ -19,20 +22,24 @@ seed: 20260731
 check_contamination: true
 
 proportions:
-  translation: 0.30      # abundant real data, deliberately capped
-  grammar: 0.20          # generated from real orthography variation
-  summarization: 0.15    # Wikipedia lead sections
-  instruction: 0.12      # seed-backed; currently short
-  qa: 0.10               # seed-backed; currently short
-  conversation: 0.05     # seed-backed; currently short
-  reasoning: 0.04        # seed-backed; currently short
-  math: 0.02             # seed-backed; currently short
-  coding: 0.02           # seed-backed; currently short
+  instruction: 0.28      # grounded_qa overviews; the largest share on purpose
+  translation: 0.25      # abundant real data, deliberately capped
+  grammar: 0.15          # generated from real orthography variation
+  summarization: 0.13    # Wikipedia lead sections
+  qa: 0.10               # grounded_qa definitions, mined from corpus paragraphs
+  conversation: 0.04     # seed-backed; still short, needs hand-authoring
+  reasoning: 0.03        # seed-backed; still short, needs hand-authoring
+  math: 0.01             # seed-backed; still short, needs hand-authoring
+  coding: 0.01           # seed-backed; still short, needs hand-authoring
 
 # Bound how much each builder is asked for, so a build does not take an hour.
 max_translation: 40000
 max_grammar: 30000
 max_summarization: 15000
+# Grounded QA and overview instructions mined from corpus paragraphs. This is
+# what fills the instruction and qa slots; the seed sets supply 45 records
+# between them, and the first SFT run trained on exactly that.
+max_grounded_qa: 15000
 
 # Both directions. A model trained only kaa->X translates out of Karakalpak
 # and not into it, and into is the direction a Karakalpak assistant needs.

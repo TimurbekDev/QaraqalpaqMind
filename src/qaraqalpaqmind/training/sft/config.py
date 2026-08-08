@@ -78,7 +78,11 @@ class MixtureConfig(StrictModel):
     """How the SFT dataset is assembled."""
 
     name: str = "sft_v1"
-    target_size: int = Field(default=50_000, ge=100)
+    # Set by how much instruction-following data exists, not by how much data
+    # exists. At 50,000 the caps for translation and grammar are larger than
+    # everything else put together, and the first SFT run came out a translation
+    # engine that answers questions in Azerbaijani.
+    target_size: int = Field(default=20_000, ge=100)
     validation_split: float = Field(default=0.02, ge=0.0, le=0.3)
     seed: int = 20260731
     check_contamination: bool = True
@@ -87,15 +91,15 @@ class MixtureConfig(StrictModel):
     # each builder can produce - translation could supply 90% and is capped.
     proportions: dict[str, float] = Field(
         default_factory=lambda: {
-            "translation": 0.30,
-            "grammar": 0.20,
-            "summarization": 0.15,
-            "instruction": 0.12,
+            "instruction": 0.28,
+            "translation": 0.25,
+            "grammar": 0.15,
+            "summarization": 0.13,
             "qa": 0.10,
-            "conversation": 0.05,
-            "reasoning": 0.04,
-            "math": 0.02,
-            "coding": 0.02,
+            "conversation": 0.04,
+            "reasoning": 0.03,
+            "math": 0.01,
+            "coding": 0.01,
         }
     )
 
@@ -103,6 +107,10 @@ class MixtureConfig(StrictModel):
     max_translation: int = Field(default=40_000, ge=0)
     max_grammar: int = Field(default=30_000, ge=0)
     max_summarization: int = Field(default=15_000, ge=0)
+    # Fills the instruction and qa slots, which the seed sets cannot: 45
+    # hand-authored examples against a 0.22 combined share is what produced an
+    # SFT model that answers in Azerbaijani.
+    max_grounded_qa: int = Field(default=15_000, ge=0)
 
     both_translation_directions: bool = True
     grammar_explanations: bool = True

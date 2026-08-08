@@ -18,7 +18,7 @@ from ...common.io import read_jsonl
 from ...common.logging import get_logger
 from ...common.paths import SFT_DIR
 from ...schemas import TaskType, parse_record
-from .builders import grammar, seeds, summarization, translation
+from .builders import grammar, grounded_qa, seeds, summarization, translation
 from .config import MixtureConfig
 from .mixture import achievable_size, assemble, chain_builders, write_mixture
 
@@ -126,6 +126,7 @@ def build(
             include_explanation=config.grammar_explanations,
         ),
         summarization.build(limit=config.max_summarization),
+        grounded_qa.build(limit=config.max_grounded_qa),
         seeds.build(),
     )
 
