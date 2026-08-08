@@ -15,6 +15,7 @@ from qaraqalpaqmind.training.sft.builders.grounded_qa import (
     agrees_with_title,
     is_prose,
     is_usable_subject,
+    is_whole_sentence,
     match_sentence,
 )
 
@@ -75,6 +76,27 @@ def test_title_agreement_allows_a_longer_subject() -> None:
     assert agrees_with_title("Ájiniyaz Qosıbay ulı", "Ájiniyaz")
     assert agrees_with_title("Ájiniyaz", "Ájiniyaz Qosıbay ulı")
     assert not agrees_with_title("Nókis", "Aral teńizi")
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        # The splitter breaks on the full stop inside an abbreviation, and the
+        # answer that reaches training stops mid-clause.
+        "Kalkutta — (2001-jıldan baslap rásmiy atı - Kolkata) (ingl.",
+        "Germaniya (), tolıq atı — Germaniya Federativ Respublikası (; abbr.",
+        "Italiya — xalıqaralıq turizmniń eń úlken oraylarınan biri (jılına 50 mln.",
+        "Family Sharing — bul 2014-jıldıń iyun ayında Apple Inc.",
+    ],
+)
+def test_sentences_cut_at_an_abbreviation_are_refused(sentence: str) -> None:
+    assert not is_whole_sentence(sentence)
+
+
+def test_a_closed_bracket_is_not_a_truncation() -> None:
+    # Parenthetical asides are normal in reference prose and must survive.
+    assert is_whole_sentence("Nilufar (Nelumbo) — suwda ósetuǵın kóp jıllıq ósimlik.")
+    assert is_whole_sentence("Aral teńizi — Oraylıq Aziyada jaylasqan kól.")
 
 
 def test_wikitext_is_not_prose() -> None:

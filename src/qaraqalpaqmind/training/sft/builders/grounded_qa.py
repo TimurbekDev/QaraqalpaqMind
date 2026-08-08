@@ -91,6 +91,17 @@ _MAX_SUBJECT_WORDS = 4
 #: as a paragraph by every length test and as noise to a reader.
 _MARKUP = ("{{", "}}", "[[", "]]", "==", "|")
 
+#: Abbreviations whose full stop is not the end of a sentence. The splitter below
+#: cannot see the difference, so `Kalkutta — (2001-jıldan rásmiy atı - Kolkata)
+#: (ingl.` was emitted as a complete answer - which teaches a model to stop
+#: mid-clause. Rather than make the regex cleverer, the truncated candidate is
+#: detected and dropped: the paragraph usually offers another sentence.
+_ABBREVIATIONS = ("ingl.", "abbr.", "rus.", "hind.", "grek.", "lat.", "mln.", "mlrd.",
+                  "h.t.b.", "t.b.", "b.e.", "ǵ.e.", "Inc.", "Ltd.", "St.", "km.", "m.")
+
+#: Openers whose closer must be present for the sentence to be whole.
+_BRACKETS = (("(", ")"), ("«", "»"), ("[", "]"), ('"', '"'))
+
 
 @dataclass(frozen=True, slots=True)
 class Template:
@@ -147,6 +158,7 @@ class GroundedStats:
     skipped_length: int = 0
     skipped_duplicate: int = 0
     skipped_cyrillic: int = 0
+    skipped_truncated: int = 0
     by_template: dict[str, int] = field(default_factory=dict)
 
     def summary(self) -> str:
@@ -155,7 +167,8 @@ class GroundedStats:
             f"overviews from {self.paragraphs:,} paragraphs in {self.documents:,} documents "
             f"(dropped {self.skipped_pronoun:,} pronoun subjects, "
             f"{self.skipped_length:,} on length, {self.skipped_duplicate:,} duplicates, "
-            f"{self.skipped_cyrillic:,} with Cyrillic homoglyphs)"
+            f"{self.skipped_cyrillic:,} with Cyrillic homoglyphs, "
+            f"{self.skipped_truncated:,} cut mid-sentence)"
         )
 
 
@@ -206,6 +219,18 @@ def match_sentence(sentence: str, title: str) -> tuple[Template, str] | None:
         if is_usable_subject(subject) and agrees_with_title(subject, title):
             return template, subject
     return None
+
+
+def is_whole_sentence(sentence: str) -> bool:
+    """Was this sentence cut short by the splitter?
+
+    Two signatures, both from real output: the sentence ends on an abbreviation
+    the splitter mistook for a full stop, or it opened a bracket it never closed
+    because the closer is in the next fragment.
+    """
+    if sentence.endswith(_ABBREVIATIONS):
+        return False
+    return all(sentence.count(open_) == sentence.count(close) for open_, close in _BRACKETS)
 
 
 def is_prose(block: str) -> bool:
@@ -275,6 +300,9 @@ def build(
 
                 if _CYRILLIC.search(sentence):
                     stats.skipped_cyrillic += 1
+                    continue
+                if not is_whole_sentence(sentence):
+                    stats.skipped_truncated += 1
                     continue
 
                 matched = match_sentence(sentence, title)
