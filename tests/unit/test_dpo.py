@@ -258,6 +258,9 @@ def test_too_many_epochs_is_rejected() -> None:
         DPOConfig.model_validate({"runtime": {"num_epochs": 5}})
 
 
-def test_prompt_must_fit_inside_the_window() -> None:
+def test_the_removed_prompt_budget_is_rejected_not_ignored() -> None:
+    # TRL 1.x deleted `max_prompt_length`: prompt and completion now share one
+    # `max_length` window. A config still carrying the old key must fail loudly,
+    # because accepting it would promise a prompt budget that nothing enforces.
     with pytest.raises(ValidationError, match="max_prompt_length"):
-        DPOConfig.model_validate({"max_length": 512, "max_prompt_length": 512})
+        DPOConfig.model_validate({"max_length": 1024, "max_prompt_length": 512})

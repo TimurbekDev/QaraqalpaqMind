@@ -46,8 +46,14 @@ class DPOConfig(StrictModel):
         description="sigmoid (standard DPO), ipo, hinge, or another TRL loss.",
     )
 
+    # Bounds prompt + completion together. TRL 1.x removed the separate
+    # `max_prompt_length` budget: there is now one window, truncated with
+    # `truncation_mode`, whose only supported value is `keep_start`. That means
+    # the *tail* is what gets cut, so a long prompt eats into its own
+    # completion rather than being trimmed to make room for it. Size this above
+    # the longest pair in the preference set; `run()` warns when pairs exceed
+    # it, because the resulting truncation trains on a cut-off answer.
     max_length: int = Field(default=1024, ge=128)
-    max_prompt_length: int = Field(default=512, ge=64)
 
     model: ModelConfig = Field(default_factory=ModelConfig)
     quantization: QuantizationConfig = Field(default_factory=QuantizationConfig)
@@ -68,15 +74,6 @@ class DPOConfig(StrictModel):
             output_dir=Path("models/dpo"), run_name="qwen3-8b-kaa-dpo"
         )
     )
-
-    @model_validator(mode="after")
-    def _prompt_must_fit_inside_the_window(self) -> DPOConfig:
-        if self.max_prompt_length >= self.max_length:
-            raise ValueError(
-                f"max_prompt_length ({self.max_prompt_length}) must be less than "
-                f"max_length ({self.max_length}), or responses are truncated to nothing"
-            )
-        return self
 
     @model_validator(mode="after")
     def _learning_rate_must_be_small(self) -> DPOConfig:

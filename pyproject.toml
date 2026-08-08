@@ -64,7 +64,11 @@ train = [
     # CUDA-matched wheel with a mismatched one.
     "torch>=2.5",
     "transformers>=4.48",
-    "trl>=0.13",
+    # Upper bound deliberately: TRL breaks trainer-config keyword arguments
+    # across majors without a deprecation path. `>=0.13` let 1.9 in, which had
+    # deleted `DPOConfig.max_prompt_length` - the DPO run died at trainer
+    # construction, after loading 8B of weights and merging the SFT adapter.
+    "trl>=1.9,<2",
     "peft>=0.14",
     "accelerate>=1.2",
     "bitsandbytes>=0.45",

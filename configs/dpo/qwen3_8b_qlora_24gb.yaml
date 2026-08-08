@@ -17,8 +17,10 @@ dataset: dpo_v1
 beta: 0.1
 loss_type: sigmoid
 
+# Prompt + completion share this one window; TRL 1.x has no separate prompt
+# budget, and it truncates the tail, so an over-long pair loses the end of its
+# answer. The run warns if pairs do not fit.
 max_length: 1024
-max_prompt_length: 512
 
 model:
   name: Qwen/Qwen3-8B

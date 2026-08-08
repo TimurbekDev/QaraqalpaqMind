@@ -129,6 +129,51 @@ def load_split(name: str, split: str) -> Any:
     return Dataset.from_list(rows)
 
 
+#: How many pairs to measure when checking that the data fits `max_length`.
+#: Tokenising a whole split twice would add minutes to startup for a number
+#: that only needs to be roughly right.
+_TRUNCATION_SAMPLE = 512
+
+
+def warn_on_truncation(config: DPOConfig, tokenizer: Any, dataset: Any) -> None:
+    """Warn when pairs do not fit inside `max_length`.
+
+    TRL truncates the tail, so an over-long pair keeps the prompt and loses the
+    end of the answer - and DPO then optimises a preference between two answers
+    that were both cut off mid-sentence. Silent, and invisible in the loss
+    curve, so it is worth a line in the log.
+    """
+    sample = dataset.select(range(min(len(dataset), _TRUNCATION_SAMPLE)))
+    longest = 0
+    over = 0
+
+    for row in sample:
+        for side in ("chosen", "rejected"):
+            tokens = tokenizer.apply_chat_template(row["prompt"] + row[side], tokenize=True)
+            longest = max(longest, len(tokens))
+            if len(tokens) > config.max_length:
+                over += 1
+                break
+
+    if over:
+        logger.warning(
+            "Preference pairs exceed max_length and will be truncated mid-answer",
+            extra={
+                "sampled": len(sample),
+                "over_budget": over,
+                "share": round(over / len(sample), 3),
+                "longest_tokens": longest,
+                "max_length": config.max_length,
+            },
+        )
+    else:
+        logger.info(
+            "All sampled pairs fit inside max_length",
+            extra={"sampled": len(sample), "longest_tokens": longest,
+                   "max_length": config.max_length},
+        )
+
+
 def build_trainer(config: DPOConfig, model: Any, tokenizer: Any, train: Any, eval_: Any) -> Any:
     from trl import DPOConfig as TRLDPOConfig
     from trl import DPOTrainer
@@ -142,8 +187,9 @@ def build_trainer(config: DPOConfig, model: Any, tokenizer: Any, train: Any, eva
         run_name=config.logging.run_name,
         beta=config.beta,
         loss_type=config.loss_type,
+        # One window for prompt + completion. TRL 1.x dropped
+        # `max_prompt_length`; passing it is a TypeError there.
         max_length=config.max_length,
-        max_prompt_length=config.max_prompt_length,
         num_train_epochs=config.runtime.num_epochs,
         max_steps=config.runtime.max_steps or -1,
         per_device_train_batch_size=config.runtime.per_device_batch_size,
@@ -210,6 +256,8 @@ def run(config: DPOConfig) -> Path:
     except FileNotFoundError:
         eval_set = None
         logger.warning("No validation split; training blind to over-optimisation")
+
+    warn_on_truncation(config, tokenizer, train_set)
 
     model = load_model(config)
     trainer = build_trainer(config, model, tokenizer, train_set, eval_set)
